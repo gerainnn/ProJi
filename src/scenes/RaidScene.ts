@@ -10,6 +10,7 @@ import { rollItem } from '../data/items';
 import { rng } from '../core/rng';
 import { floatingNumber, makeButton, shake } from '../ui/widgets';
 import { sfx } from '../core/sfx';
+import { registerSprites } from '../art/sprites';
 
 const ROOMS_PER_RAID = 5;
 
@@ -37,6 +38,11 @@ export class RaidScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.bounds = new Phaser.Geom.Rectangle(20, 90, width - 40, height - 240);
 
+    // Defensive: ensure sprite textures exist
+    if (!this.game.textures.exists('player') || !this.game.textures.exists('dungeon_tile')) {
+      registerSprites(this);
+    }
+
     // Dungeon stone floor
     this.floor = this.add.tileSprite(this.bounds.centerX, this.bounds.centerY, this.bounds.width, this.bounds.height, 'dungeon_tile').setDepth(-10);
 
@@ -48,9 +54,9 @@ export class RaidScene extends Phaser.Scene {
       fontFamily: THEME.font.body, fontSize: '16px', color: THEME.text, fontStyle: '800',
     }).setOrigin(0.5);
     this.exitButton = makeButton({
-      scene: this, x: 60, y: 30, w: 90, h: 40, label: '⏏ Выйти',
-      color: 0x6e1f2a,
-      onTap: () => this.extract(false),
+      scene: this, x: 70, y: 30, w: 120, h: 42, label: '🚪 ВЫЙТИ',
+      color: 0x6e1f2a, fontSize: 14,
+      onTap: () => this.confirmExit(),
     });
 
     this.player = new Player(this, this.bounds.centerX, this.bounds.bottom - 80, store.raidPlayerStartHp());
@@ -243,6 +249,36 @@ export class RaidScene extends Phaser.Scene {
       shards: this.rewardShards,
       items: this.rewardItems,
     });
+  }
+
+  private confirmExit() {
+    const { width, height } = this.scale;
+    const overlay = this.add.rectangle(0, 0, width, height, 0x000000, 0.6).setOrigin(0).setDepth(2000).setInteractive();
+    const panel = this.add.rectangle(width / 2, height / 2, width - 60, 220, THEME.panel, 1)
+      .setStrokeStyle(2, THEME.border, 1).setDepth(2001);
+    const t = this.add.text(width / 2, height / 2 - 60, 'Покинуть рейд?', {
+      fontFamily: THEME.font.body, fontSize: '20px', color: THEME.text, fontStyle: '800',
+    }).setOrigin(0.5).setDepth(2002);
+    const sub = this.add.text(width / 2, height / 2 - 28, 'Награды останутся при тебе.', {
+      fontFamily: THEME.font.body, fontSize: '13px', color: THEME.textDim,
+    }).setOrigin(0.5).setDepth(2002);
+    const yes = makeButton({
+      scene: this, x: width / 2 - 80, y: height / 2 + 40, w: 140, h: 56,
+      label: 'Выйти', color: 0x6e1f2a,
+      onTap: () => {
+        overlay.destroy(); panel.destroy(); t.destroy(); sub.destroy(); yes.destroy(); no.destroy();
+        this.extract(false);
+      },
+    });
+    yes.setDepth(2002);
+    const no = makeButton({
+      scene: this, x: width / 2 + 80, y: height / 2 + 40, w: 140, h: 56,
+      label: 'Назад', color: 0x1f7fb0,
+      onTap: () => {
+        overlay.destroy(); panel.destroy(); t.destroy(); sub.destroy(); yes.destroy(); no.destroy();
+      },
+    });
+    no.setDepth(2002);
   }
 
   update(_t: number, deltaMs: number) {

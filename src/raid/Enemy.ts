@@ -44,13 +44,15 @@ export class Enemy extends Phaser.GameObjects.Container {
   }
 
   step(dt: number, target: { x: number; y: number }, bounds: Phaser.Geom.Rectangle): { fire?: { x: number; y: number; angle: number; speed: number; dmg: number } } {
-    // Hit flash via tintFill
-    if (this.hitFlash > 0) {
-      this.hitFlash -= dt;
-      this.sprite.setTintFill(0xffffff);
-    } else {
-      this.sprite.clearTint();
-    }
+    // Hit flash via tintFill (guard against missing API)
+    try {
+      if (this.hitFlash > 0) {
+        this.hitFlash -= dt;
+        if ((this.sprite as any).setTintFill) (this.sprite as any).setTintFill(0xffffff);
+      } else {
+        this.sprite.clearTint();
+      }
+    } catch { /* tint not supported in some renderers — ignore */ }
     if (Math.abs(this.knockbackX) > 0.01 || Math.abs(this.knockbackY) > 0.01) {
       this.x += this.knockbackX * dt;
       this.y += this.knockbackY * dt;
@@ -81,9 +83,9 @@ export class Enemy extends Phaser.GameObjects.Container {
         this.y += (dy / dist) * this.tpl.speed * dt;
       }
     }
-    // Face target horizontally
-    if (dx < -2) this.sprite.setScale(-Math.abs(this.sprite.scaleX), this.sprite.scaleY);
-    else if (dx > 2) this.sprite.setScale(Math.abs(this.sprite.scaleX), this.sprite.scaleY);
+    // Face target horizontally via flipX (safer than negative scale)
+    if (dx < -2) this.sprite.setFlipX(true);
+    else if (dx > 2) this.sprite.setFlipX(false);
 
     this.x = Phaser.Math.Clamp(this.x, bounds.left + this.tpl.size, bounds.right - this.tpl.size);
     this.y = Phaser.Math.Clamp(this.y, bounds.top + this.tpl.size, bounds.bottom - this.tpl.size);

@@ -10,9 +10,16 @@ const SLOT_TEXTURE: Record<Slot, string> = { weapon: 'icon_sword', armor: 'icon_
 function iconTextureForItem(item: Item): string {
   if (item.slot === 'weapon') {
     const w = item as any;
-    if (w.kind === 'bow') return 'icon_bow';
-    if (w.kind === 'staff') return 'icon_staff';
-    return 'icon_sword';
+    switch (w.kind) {
+      case 'bow': return 'icon_bow';
+      case 'staff': return 'icon_staff';
+      case 'wand': return 'icon_wand';
+      case 'dagger': return 'icon_dagger';
+      case 'mace': return 'icon_mace';
+      case 'spear': return 'icon_spear';
+      case 'axe': return 'icon_axe';
+      default: return 'icon_sword';
+    }
   }
   return SLOT_TEXTURE[item.slot];
 }

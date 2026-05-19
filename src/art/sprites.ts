@@ -30,8 +30,12 @@ function makeCanvas(w: number, h: number): { canvas: HTMLCanvasElement; ctx: Can
 }
 
 function register(scene: Phaser.Scene, key: string, canvas: HTMLCanvasElement) {
-  if (scene.textures.exists(key)) scene.textures.remove(key);
-  scene.textures.addCanvas(key, canvas);
+  // Use the global texture manager from the game so textures survive scene transitions.
+  const tm = scene.game.textures;
+  if (tm.exists(key)) tm.remove(key);
+  const tex = tm.addCanvas(key, canvas);
+  // Force WebGL upload so the texture appears immediately, not after the next draw.
+  tex?.refresh();
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -135,6 +139,22 @@ export function drawSlime(ctx: CanvasRenderingContext2D, w: number, h: number, c
   ctx.ellipse(cx - w * 0.05, h * 0.18, w * 0.035, h * 0.05, -0.4, 0, Math.PI * 2);
   ctx.fill();
 
+  // Bubbles inside the body
+  ctx.fillStyle = alpha(lighten(c.body, 50), 0.55);
+  ctx.strokeStyle = alpha(c.accent, 0.6);
+  ctx.lineWidth = 1;
+  for (const [bx, by, br] of [
+    [cx + w * 0.15, h * 0.40, w * 0.04],
+    [cx + w * 0.20, h * 0.62, w * 0.025],
+    [cx - w * 0.25, h * 0.62, w * 0.03],
+    [cx + w * 0.05, h * 0.78, w * 0.025],
+  ] as const) {
+    ctx.beginPath();
+    ctx.arc(bx, by, br, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
   // Eyes
   const eyeY = h * 0.50;
   eyes(ctx, cx - w * 0.13, eyeY, cx + w * 0.13, eyeY, w * 0.075);
@@ -237,6 +257,41 @@ export function drawGoblin(ctx: CanvasRenderingContext2D, w: number, h: number, 
   ctx.strokeStyle = '#1a1a1a';
   ctx.lineWidth = 1;
   ctx.stroke();
+
+  // Crude wooden club in hand (right side)
+  ctx.save();
+  ctx.translate(cx + w * 0.36, h * 0.70);
+  ctx.rotate(-0.3);
+  // Handle
+  ctx.fillStyle = '#5a3a1a';
+  ctx.strokeStyle = '#2a1a08';
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(-w * 0.04, -h * 0.18, w * 0.08, h * 0.30);
+  ctx.strokeRect(-w * 0.04, -h * 0.18, w * 0.08, h * 0.30);
+  // Bulbous head
+  ctx.fillStyle = '#7a5028';
+  ctx.beginPath();
+  ctx.ellipse(0, -h * 0.22, w * 0.10, h * 0.08, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Spikes
+  ctx.fillStyle = '#cfdfee';
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 1;
+  for (const [sx, sy, sa] of [[0, -h * 0.30, 0], [w * 0.08, -h * 0.22, 0.6], [-w * 0.08, -h * 0.22, -0.6]] as const) {
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(sa);
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.015, 0);
+    ctx.lineTo(w * 0.015, 0);
+    ctx.lineTo(0, -h * 0.04);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -910,6 +965,177 @@ export function drawTrinketIcon(ctx: CanvasRenderingContext2D, w: number, h: num
   ctx.stroke();
 }
 
+export function drawDaggerIcon(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(-Math.PI / 4);
+  // Short sharp blade
+  const grad = ctx.createLinearGradient(-w * 0.04, -h * 0.30, w * 0.04, -h * 0.30);
+  grad.addColorStop(0, '#cfdfee');
+  grad.addColorStop(0.5, '#ffffff');
+  grad.addColorStop(1, '#8ba0b8');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(0, -h * 0.32);
+  ctx.lineTo(w * 0.045, h * 0.02);
+  ctx.lineTo(-w * 0.045, h * 0.02);
+  ctx.closePath();
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#1f2a38';
+  ctx.stroke();
+  // Crossguard (small)
+  ctx.fillStyle = '#2a1a08';
+  ctx.fillRect(-w * 0.10, h * 0.02, w * 0.20, h * 0.04);
+  // Wrapped handle
+  ctx.fillStyle = '#5a3020';
+  ctx.fillRect(-w * 0.035, h * 0.06, w * 0.07, h * 0.18);
+  ctx.strokeStyle = '#a07020';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.035, h * (0.10 + i * 0.04));
+    ctx.lineTo(w * 0.035, h * (0.10 + i * 0.04));
+    ctx.stroke();
+  }
+  // Pommel
+  ctx.fillStyle = '#f3c969';
+  ctx.beginPath();
+  ctx.arc(0, h * 0.27, w * 0.045, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+export function drawMaceIcon(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(-Math.PI / 5);
+  // Handle
+  ctx.fillStyle = '#5a3020';
+  ctx.strokeStyle = '#2a1408';
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(-w * 0.04, -h * 0.10, w * 0.08, h * 0.45);
+  ctx.strokeRect(-w * 0.04, -h * 0.10, w * 0.08, h * 0.45);
+  // Spiked head (sphere with spikes)
+  const headGrad = ctx.createRadialGradient(-w * 0.05, -h * 0.30, w * 0.02, 0, -h * 0.25, w * 0.18);
+  headGrad.addColorStop(0, '#cfdfee');
+  headGrad.addColorStop(1, '#3e4d62');
+  ctx.fillStyle = headGrad;
+  ctx.beginPath();
+  ctx.arc(0, -h * 0.22, w * 0.16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#1f2a38';
+  ctx.stroke();
+  // Spikes around
+  ctx.fillStyle = '#cfdfee';
+  ctx.strokeStyle = '#1f2a38';
+  ctx.lineWidth = 1.5;
+  const cnt = 8;
+  for (let i = 0; i < cnt; i++) {
+    const a = (Math.PI * 2 * i) / cnt;
+    const tx = Math.cos(a) * w * 0.16;
+    const ty = -h * 0.22 + Math.sin(a) * w * 0.16;
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.rotate(a);
+    ctx.beginPath();
+    ctx.moveTo(0, -w * 0.025);
+    ctx.lineTo(w * 0.10, 0);
+    ctx.lineTo(0, w * 0.025);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+export function drawSpearIcon(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(-Math.PI / 4);
+  // Long shaft
+  ctx.fillStyle = '#5a3020';
+  ctx.strokeStyle = '#2a1408';
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(-w * 0.025, -h * 0.30, w * 0.05, h * 0.65);
+  ctx.strokeRect(-w * 0.025, -h * 0.30, w * 0.05, h * 0.65);
+  // Leaf-shaped head
+  const grad = ctx.createLinearGradient(-w * 0.06, -h * 0.45, w * 0.06, -h * 0.45);
+  grad.addColorStop(0, '#cfdfee');
+  grad.addColorStop(0.5, '#ffffff');
+  grad.addColorStop(1, '#8ba0b8');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(0, -h * 0.48);
+  ctx.bezierCurveTo(w * 0.10, -h * 0.40, w * 0.06, -h * 0.30, 0, -h * 0.28);
+  ctx.bezierCurveTo(-w * 0.06, -h * 0.30, -w * 0.10, -h * 0.40, 0, -h * 0.48);
+  ctx.closePath();
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#1f2a38';
+  ctx.stroke();
+  // Binding
+  ctx.fillStyle = '#a07020';
+  ctx.fillRect(-w * 0.04, -h * 0.28, w * 0.08, h * 0.04);
+  ctx.restore();
+}
+
+export function drawAxeIcon(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(-Math.PI / 8);
+  // Handle
+  ctx.fillStyle = '#5a3020';
+  ctx.strokeStyle = '#2a1408';
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(-w * 0.035, -h * 0.10, w * 0.07, h * 0.50);
+  ctx.strokeRect(-w * 0.035, -h * 0.10, w * 0.07, h * 0.50);
+  // Axe head (curved blade)
+  const grad = ctx.createLinearGradient(-w * 0.20, -h * 0.20, w * 0.20, -h * 0.20);
+  grad.addColorStop(0, '#cfdfee');
+  grad.addColorStop(0.5, '#8ba0b8');
+  grad.addColorStop(1, '#3e4d62');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(-w * 0.04, -h * 0.10);
+  ctx.lineTo(-w * 0.28, -h * 0.30);
+  ctx.bezierCurveTo(-w * 0.20, -h * 0.05, -w * 0.20, h * 0.00, -w * 0.28, h * 0.05);
+  ctx.lineTo(-w * 0.04, -h * 0.04);
+  ctx.closePath();
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#1f2a38';
+  ctx.stroke();
+  ctx.restore();
+}
+
+export function drawWandIcon(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(-Math.PI / 5);
+  // Slender wand
+  ctx.fillStyle = '#3a2010';
+  ctx.strokeStyle = '#1a0a04';
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(-w * 0.02, -h * 0.20, w * 0.04, h * 0.45);
+  ctx.strokeRect(-w * 0.02, -h * 0.20, w * 0.04, h * 0.45);
+  // Glowing tip (purple)
+  ctx.shadowColor = '#c084ff';
+  ctx.shadowBlur = 16;
+  const tipGrad = ctx.createRadialGradient(0, -h * 0.26, w * 0.01, 0, -h * 0.24, w * 0.10);
+  tipGrad.addColorStop(0, '#ffffff');
+  tipGrad.addColorStop(0.5, '#c084ff');
+  tipGrad.addColorStop(1, '#4d2c80');
+  ctx.fillStyle = tipGrad;
+  ctx.beginPath();
+  ctx.arc(0, -h * 0.24, w * 0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Background tiles
 // ────────────────────────────────────────────────────────────────────────────
@@ -1051,8 +1277,13 @@ export function registerSprites(scene: Phaser.Scene) {
   // Item icons (in 64x64)
   const iconSpecs: Spec[] = [
     { key: 'icon_sword',   w: 64, h: 64, draw: drawSwordIcon },
+    { key: 'icon_dagger',  w: 64, h: 64, draw: drawDaggerIcon },
+    { key: 'icon_mace',    w: 64, h: 64, draw: drawMaceIcon },
+    { key: 'icon_spear',   w: 64, h: 64, draw: drawSpearIcon },
+    { key: 'icon_axe',     w: 64, h: 64, draw: drawAxeIcon },
     { key: 'icon_bow',     w: 64, h: 64, draw: drawBowIcon },
     { key: 'icon_staff',   w: 64, h: 64, draw: drawStaffIcon },
+    { key: 'icon_wand',    w: 64, h: 64, draw: drawWandIcon },
     { key: 'icon_armor',   w: 64, h: 64, draw: drawArmorIcon },
     { key: 'icon_trinket', w: 64, h: 64, draw: drawTrinketIcon },
   ];

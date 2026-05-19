@@ -5,6 +5,7 @@ import { monsterForLevel, monsterHp, monsterGold, type MonsterTemplate } from '.
 import { floatingNumber, makeButton, shake } from '../ui/widgets';
 import { formatNum } from './HudScene';
 import { sfx } from '../core/sfx';
+import { registerSprites } from '../art/sprites';
 
 export class ClickerScene extends Phaser.Scene {
   private monsterTpl!: MonsterTemplate;
@@ -27,6 +28,11 @@ export class ClickerScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
+
+    // Defensive: ensure all sprite textures exist (in case Boot was skipped after a hot reload)
+    if (!this.game.textures.exists('slime') || !this.game.textures.exists('starfield_bg')) {
+      registerSprites(this);
+    }
 
     // Starfield background
     this.bgImage = this.add.image(width / 2, height / 2, 'starfield_bg').setDisplaySize(width, height).setDepth(-100);
@@ -158,9 +164,11 @@ export class ClickerScene extends Phaser.Scene {
     if (!isAuto) {
       this.tweens.add({ targets: this.monsterContainer, scale: 0.92, duration: 60, yoyo: true });
       sfx.click();
-      // Hit flash on sprite
-      this.monsterSprite.setTintFill(0xffffff);
-      this.time.delayedCall(60, () => this.monsterSprite.clearTint());
+      // Hit flash on sprite (guarded)
+      try {
+        (this.monsterSprite as any).setTintFill?.(0xffffff);
+        this.time.delayedCall(60, () => this.monsterSprite.clearTint());
+      } catch { /* ignore tint errors */ }
     }
     if (isCrit) { shake(this, 0.012, 140); sfx.crit(); }
 

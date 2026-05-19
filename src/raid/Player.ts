@@ -32,8 +32,8 @@ export class Player extends Phaser.GameObjects.Container {
     if (len < 0.001) return;
     this.facing.x = x / len;
     this.facing.y = y / len;
-    if (x < -2) this.sprite.setScale(-Math.abs(this.sprite.scaleX), this.sprite.scaleY);
-    else if (x > 2) this.sprite.setScale(Math.abs(this.sprite.scaleX), this.sprite.scaleY);
+    if (x < -2) this.sprite.setFlipX(true);
+    else if (x > 2) this.sprite.setFlipX(false);
   }
 
   takeDamage(dmg: number, defenseFlat: number): number {
