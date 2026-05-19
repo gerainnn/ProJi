@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { THEME } from '../ui/theme';
+import { registerSprites } from '../art/sprites';
 
 /**
  * Generates programmatic textures used across the game.
@@ -9,6 +10,7 @@ export class BootScene extends Phaser.Scene {
   constructor() { super('BootScene'); }
 
   create() {
+    // Old utility textures (still used for particles / UI bits)
     this.makeCircle('px-circle-w', 64, 0xffffff);
     this.makeCircle('px-circle-soft', 128, 0xffffff, 0.6);
     this.makeRing('px-ring', 64, 6, 0xffffff);
@@ -16,11 +18,10 @@ export class BootScene extends Phaser.Scene {
     this.makeRect('px-pixel', 2, 2, 0xffffff);
     this.makeStar('px-star', 64, 5, 0xffffff);
     this.makeArrow('px-arrow', 0xffffff);
-    // Particle dot
     this.makeCircle('px-dot', 16, 0xffffff);
 
-    // Tile texture for raid floor
-    this.makeFloorTile('floor-tile', 64);
+    // High-quality canvas sprites for monsters, enemies, items, backgrounds
+    registerSprites(this);
 
     // Done — start clicker + persistent HUD
     this.scene.start('ClickerScene');
@@ -73,7 +74,6 @@ export class BootScene extends Phaser.Scene {
   private makeArrow(key: string, color: number) {
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     g.fillStyle(color, 1);
-    // arrow pointing right, shape 24x8
     g.beginPath();
     g.moveTo(0, 2);
     g.lineTo(16, 2);
@@ -85,19 +85,6 @@ export class BootScene extends Phaser.Scene {
     g.closePath();
     g.fillPath();
     g.generateTexture(key, 24, 8);
-    g.destroy();
-  }
-
-  private makeFloorTile(key: string, size: number) {
-    const g = this.make.graphics({ x: 0, y: 0 }, false);
-    g.fillStyle(THEME.panel, 1);
-    g.fillRect(0, 0, size, size);
-    g.lineStyle(1, THEME.border, 0.6);
-    g.strokeRect(0.5, 0.5, size - 1, size - 1);
-    // subtle inner decoration
-    g.fillStyle(THEME.panelLight, 0.6);
-    g.fillRect(size / 2 - 2, size / 2 - 2, 4, 4);
-    g.generateTexture(key, size, size);
     g.destroy();
   }
 }

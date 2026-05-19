@@ -5,15 +5,13 @@ import { Joystick } from '../raid/Joystick';
 import { Player } from '../raid/Player';
 import { Enemy } from '../raid/Enemy';
 import { Projectile } from '../raid/Projectile';
-import { ENEMIES, pickEnemyForRoom, type EnemyTemplate } from '../data/enemies';
+import { pickEnemyForRoom } from '../data/enemies';
 import { rollItem } from '../data/items';
 import { rng } from '../core/rng';
 import { floatingNumber, makeButton, shake } from '../ui/widgets';
-import { formatNum } from './HudScene';
 import { sfx } from '../core/sfx';
 
-const ROOMS_PER_RAID = 5; // last is boss
-const TILE = 64;
+const ROOMS_PER_RAID = 5;
 
 export class RaidScene extends Phaser.Scene {
   private bounds!: Phaser.Geom.Rectangle;
@@ -39,15 +37,13 @@ export class RaidScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.bounds = new Phaser.Geom.Rectangle(20, 90, width - 40, height - 240);
 
-    // Floor with tile pattern
-    this.floor = this.add.tileSprite(this.bounds.centerX, this.bounds.centerY, this.bounds.width, this.bounds.height, 'floor-tile').setDepth(-10);
+    // Dungeon stone floor
+    this.floor = this.add.tileSprite(this.bounds.centerX, this.bounds.centerY, this.bounds.width, this.bounds.height, 'dungeon_tile').setDepth(-10);
 
-    // Walls
     this.wallsGfx = this.add.graphics().setDepth(-5);
     this.drawWalls();
 
-    // Top bar
-    const topBar = this.add.rectangle(width / 2, 30, width - 24, 50, THEME.panel, 0.95).setStrokeStyle(2, THEME.border, 1);
+    this.add.rectangle(width / 2, 30, width - 24, 50, THEME.panel, 0.95).setStrokeStyle(2, THEME.border, 1);
     this.roomText = this.add.text(width / 2, 30, '', {
       fontFamily: THEME.font.body, fontSize: '16px', color: THEME.text, fontStyle: '800',
     }).setOrigin(0.5);
@@ -57,13 +53,8 @@ export class RaidScene extends Phaser.Scene {
       onTap: () => this.extract(false),
     });
 
-    // Player
     this.player = new Player(this, this.bounds.centerX, this.bounds.bottom - 80, store.raidPlayerStartHp());
-
-    // HP bar (player)
     this.hpBar = this.add.graphics().setDepth(1000);
-
-    // Joystick zone: bottom 220px area
     this.joystick = new Joystick(this, 0, height - 220, width, 220);
 
     this.currentRoom = 0;
@@ -82,22 +73,36 @@ export class RaidScene extends Phaser.Scene {
 
   private drawWalls() {
     this.wallsGfx.clear();
-    this.wallsGfx.fillStyle(THEME.panelLight, 1);
     const b = this.bounds;
-    const wT = 12;
+    const wT = 14;
+
+    // Outer dark frame
+    this.wallsGfx.fillStyle(0x05070b, 1);
     this.wallsGfx.fillRect(b.left - wT, b.top - wT, b.width + 2 * wT, wT);
     this.wallsGfx.fillRect(b.left - wT, b.bottom, b.width + 2 * wT, wT);
     this.wallsGfx.fillRect(b.left - wT, b.top, wT, b.height);
     this.wallsGfx.fillRect(b.right, b.top, wT, b.height);
-    this.wallsGfx.lineStyle(2, 0x1f7fb0, 0.7);
+
+    // Stone wall layer
+    this.wallsGfx.fillStyle(0x252b3a, 1);
+    this.wallsGfx.fillRect(b.left - wT + 3, b.top - wT + 3, b.width + 2 * wT - 6, wT - 3);
+    this.wallsGfx.fillRect(b.left - wT + 3, b.bottom, b.width + 2 * wT - 6, wT - 3);
+    this.wallsGfx.fillRect(b.left - wT + 3, b.top, wT - 3, b.height);
+    this.wallsGfx.fillRect(b.right + 3, b.top, wT - 3, b.height);
+
+    // Inner accent line
+    this.wallsGfx.lineStyle(2, 0x4a5468, 0.85);
     this.wallsGfx.strokeRect(b.left, b.top, b.width, b.height);
+
+    // Faint glow inside
+    this.wallsGfx.lineStyle(2, 0x6ad0ff, 0.15);
+    this.wallsGfx.strokeRect(b.left + 4, b.top + 4, b.width - 8, b.height - 8);
   }
 
   private startRoom(idx: number) {
     this.currentRoom = idx;
     this.roomText.setText(idx === ROOMS_PER_RAID - 1 ? `БОСС  •  комната ${idx + 1}/${ROOMS_PER_RAID}` : `комната ${idx + 1}/${ROOMS_PER_RAID}`);
     if (this.nextRoomBtn) this.nextRoomBtn.destroy();
-    // Spawn enemies
     const isBoss = idx === ROOMS_PER_RAID - 1;
     const templates = pickEnemyForRoom(idx, isBoss);
     const count = isBoss ? 1 : Math.min(6, 2 + idx);
@@ -108,14 +113,11 @@ export class RaidScene extends Phaser.Scene {
       const ey = Phaser.Math.Between(this.bounds.top + 40, this.bounds.top + 200);
       const e = new Enemy(this, ex, ey, tpl, hpScale);
       this.enemies.push(e);
-      // Spawn flash
       e.setScale(0);
       this.tweens.add({ targets: e, scale: 1, duration: 280, ease: 'Back.easeOut', delay: i * 60 });
     }
-    // Center player at bottom
     this.player.x = this.bounds.centerX;
     this.player.y = this.bounds.bottom - 80;
-    // Brief immunity
     this.player.invuln = 1.0;
   }
 
@@ -141,11 +143,8 @@ export class RaidScene extends Phaser.Scene {
     const target = this.nearestEnemy();
     if (!target) return;
     const dist = Phaser.Math.Distance.BetweenPoints(this.player, target);
-
-    // Aim towards nearest enemy
     this.player.setFacing(target.x - this.player.x, target.y - this.player.y);
 
-    // Damage from store
     const baseDmg = (1 + (w?.damage ?? 0)) * store.raidDamageMult();
     const cc = (w?.critChance ?? 0) + store.effects.critChance;
     const cm = 2 + (w?.critMult ?? 0) + store.effects.critMult;
@@ -153,19 +152,17 @@ export class RaidScene extends Phaser.Scene {
     const dmg = Math.max(1, Math.round(baseDmg * (isCrit ? cm : 1)));
 
     if (!w || w.projectileSpeed === 0) {
-      // Melee
       const range = w?.range ?? 56;
       if (dist > range) return;
       this.attackCd = 0.45 / (1 + (w?.attackSpeed ?? 0));
       const swing = this.player.meleeSwing(this, range);
-      // Hit all enemies in arc
       for (const e of [...this.enemies]) {
         const ddx = e.x - this.player.x;
         const ddy = e.y - this.player.y;
         const ed = Math.hypot(ddx, ddy);
         if (ed > range) continue;
         const ea = Math.atan2(ddy, ddx);
-        let diff = Math.atan2(Math.sin(ea - swing.ang), Math.cos(ea - swing.ang));
+        const diff = Math.atan2(Math.sin(ea - swing.ang), Math.cos(ea - swing.ang));
         if (Math.abs(diff) > swing.arc / 2) continue;
         const dead = e.takeDamage(dmg, ddx / ed * 200, ddy / ed * 200);
         floatingNumber(this, e.x, e.y - 12, `${dmg}`, isCrit ? THEME.gold : '#ffffff', isCrit);
@@ -174,15 +171,12 @@ export class RaidScene extends Phaser.Scene {
       shake(this, 0.008, 80);
       sfx.hit();
     } else {
-      // Ranged
       const range = w.range;
       if (dist > range) return;
       this.attackCd = 0.5 / (1 + w.attackSpeed);
       const ang = Math.atan2(target.y - this.player.y, target.x - this.player.x);
       this.fireProjectile(this.player.x, this.player.y, ang, w.projectileSpeed, dmg, 'player');
       sfx.shoot();
-      // Mark crit on next hit by encoding small color via damage... we just float on impact.
-      // Recoil
       this.tweens.add({ targets: this.player, scale: 0.92, duration: 60, yoyo: true });
     }
   }
@@ -190,24 +184,21 @@ export class RaidScene extends Phaser.Scene {
   private killEnemy(e: Enemy) {
     const idx = this.enemies.indexOf(e);
     if (idx >= 0) this.enemies.splice(idx, 1);
-    // Death particle
-    for (let i = 0; i < 10; i++) {
-      const ang = (Math.PI * 2 * i) / 10 + Math.random();
+    for (let i = 0; i < 12; i++) {
+      const ang = (Math.PI * 2 * i) / 12 + Math.random();
       const p = this.add.circle(e.x, e.y, 4, e.tpl.body, 1).setDepth(50);
       this.tweens.add({
         targets: p,
-        x: e.x + Math.cos(ang) * 50,
-        y: e.y + Math.sin(ang) * 50,
+        x: e.x + Math.cos(ang) * 60,
+        y: e.y + Math.sin(ang) * 60,
         alpha: 0, scale: 0.2, duration: 380,
         onComplete: () => p.destroy(),
       });
     }
-    // Reward shards (small)
     const isBossKill = e.tpl.key === 'boss';
     const sh = isBossKill ? Phaser.Math.Between(8, 14) : Phaser.Math.Between(1, 3);
     this.rewardShards += sh;
     if (isBossKill) {
-      // Boss drops a guaranteed item too
       const tier = Math.max(1, this.currentRoom + 1);
       const drop = rollItem({ level: store.data.monsterLevel + tier });
       this.rewardItems.push(drop);
@@ -223,7 +214,6 @@ export class RaidScene extends Phaser.Scene {
 
   private onRoomCleared() {
     const isBossRoom = this.currentRoom === ROOMS_PER_RAID - 1;
-    // Award gold per room
     const gold = 8 + this.currentRoom * 6 + (isBossRoom ? 30 : 0);
     this.rewardGold += gold;
     floatingNumber(this, this.bounds.centerX, this.bounds.centerY, isBossRoom ? 'РЕЙД ЗАВЕРШЁН' : 'комната очищена', THEME.good, true);
@@ -232,7 +222,6 @@ export class RaidScene extends Phaser.Scene {
       this.time.delayedCall(800, () => this.extract(true));
       return;
     }
-    // Show next-room button
     const { width } = this.scale;
     this.nextRoomBtn = makeButton({
       scene: this, x: width / 2, y: this.bounds.centerY + 40, w: 220, h: 60,
@@ -241,7 +230,6 @@ export class RaidScene extends Phaser.Scene {
   }
 
   private extract(won: boolean) {
-    // Apply rewards
     store.addGold(this.rewardGold);
     store.addShards(this.rewardShards);
     for (const it of this.rewardItems) store.addItem(it);
@@ -259,7 +247,6 @@ export class RaidScene extends Phaser.Scene {
 
   update(_t: number, deltaMs: number) {
     const dt = Math.min(0.05, deltaMs / 1000);
-    // Player movement
     const j = this.joystick.vec;
     const vx = j.x * this.player.speed;
     const vy = j.y * this.player.speed;
@@ -270,13 +257,11 @@ export class RaidScene extends Phaser.Scene {
     this.floor.tilePositionX += vx * dt * 0.05;
     this.floor.tilePositionY += vy * dt * 0.05;
 
-    // Enemies update
     for (const e of [...this.enemies]) {
       const r = e.step(dt, this.player, this.bounds);
       if (r.fire) {
         this.fireProjectile(r.fire.x, r.fire.y, r.fire.angle, r.fire.speed, r.fire.dmg, 'enemy');
       }
-      // Contact damage
       const d = Phaser.Math.Distance.BetweenPoints(this.player, e);
       if (d < 18 + e.tpl.size && this.player.invuln <= 0) {
         const armor = store.equippedItem('armor');
@@ -289,7 +274,6 @@ export class RaidScene extends Phaser.Scene {
       }
     }
 
-    // Projectiles
     for (const p of [...this.projectiles]) {
       const alive = p.step(dt, this.bounds);
       if (!alive) { this.killProjectile(p); continue; }
@@ -321,10 +305,7 @@ export class RaidScene extends Phaser.Scene {
       }
     }
 
-    // Player attack
     this.playerAttack(dt);
-
-    // HP bar
     this.drawPlayerHp();
   }
 
@@ -350,7 +331,6 @@ export class RaidScene extends Phaser.Scene {
   }
 
   private gameOver() {
-    // Lose half rewards on death
     this.rewardGold = Math.floor(this.rewardGold / 2);
     this.rewardShards = Math.floor(this.rewardShards / 2);
     this.rewardItems = this.rewardItems.slice(0, Math.floor(this.rewardItems.length / 2));

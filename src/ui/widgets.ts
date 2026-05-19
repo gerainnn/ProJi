@@ -25,25 +25,24 @@ export function makeButton(opts: ButtonOpts): Phaser.GameObjects.Container {
   }).setOrigin(0.5);
   c.add([bg, txt]);
   c.setSize(w, h);
-  c.setInteractive(new Phaser.Geom.Rectangle(-w / 2, -h / 2, w, h), Phaser.Geom.Rectangle.Contains);
-  let isDown = false;
+  // Hit zone slightly larger than visible button for easier mobile tapping
+  const pad = 6;
+  c.setInteractive(
+    new Phaser.Geom.Rectangle(-w / 2 - pad, -h / 2 - pad, w + 2 * pad, h + 2 * pad),
+    Phaser.Geom.Rectangle.Contains,
+  );
   if (opts.disabled) {
     bg.setFillStyle(THEME.panel, 1);
     txt.setAlpha(0.5);
   } else {
+    let lastFire = 0;
     c.on('pointerdown', () => {
-      isDown = true;
-      scene.tweens.add({ targets: c, scale: 0.94, duration: 60 });
-    });
-    c.on('pointerup', () => {
-      if (!isDown) return;
-      isDown = false;
-      scene.tweens.add({ targets: c, scale: 1, duration: 80 });
+      // Fire on press for instant tactile response. Debounce to avoid double-fires.
+      const now = Date.now();
+      if (now - lastFire < 220) return;
+      lastFire = now;
+      scene.tweens.add({ targets: c, scale: 0.92, duration: 70, yoyo: true, ease: 'Quad.easeOut' });
       opts.onTap();
-    });
-    c.on('pointerout', () => {
-      isDown = false;
-      scene.tweens.add({ targets: c, scale: 1, duration: 80 });
     });
   }
   return c;

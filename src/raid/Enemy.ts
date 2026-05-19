@@ -10,7 +10,7 @@ export class Enemy extends Phaser.GameObjects.Container {
   hitFlash = 0;
   knockbackX = 0;
   knockbackY = 0;
-  core: Phaser.GameObjects.Arc;
+  sprite: Phaser.GameObjects.Image;
   shadow: Phaser.GameObjects.Ellipse;
   hpBarBg!: Phaser.GameObjects.Rectangle;
   hpBar!: Phaser.GameObjects.Rectangle;
@@ -21,16 +21,17 @@ export class Enemy extends Phaser.GameObjects.Container {
     this.tpl = tpl;
     this.hpMax = Math.round(tpl.hp * hpScale);
     this.hp = this.hpMax;
-    this.shadow = scene.add.ellipse(0, tpl.size * 0.7, tpl.size * 1.6, tpl.size * 0.5, 0x000000, 0.45);
-    this.core = scene.add.circle(0, 0, tpl.size, tpl.body, 1).setStrokeStyle(2, tpl.accent, 1);
-    // Eyes
-    const eyeOffset = tpl.size * 0.3;
-    const eL = scene.add.circle(-eyeOffset, -tpl.size * 0.1, Math.max(2, tpl.size * 0.13), 0x111111);
-    const eR = scene.add.circle(eyeOffset, -tpl.size * 0.1, Math.max(2, tpl.size * 0.13), 0x111111);
-    this.hpBarBg = scene.add.rectangle(0, -tpl.size - 8, tpl.size * 2.2, 4, 0x000000, 0.6);
-    this.hpBar = scene.add.rectangle(0, -tpl.size - 8, tpl.size * 2.2, 4, 0xff5d6c, 1);
-    this.hpBar.setOrigin(0.5);
-    this.add([this.shadow, this.core, eL, eR, this.hpBarBg, this.hpBar]);
+
+    const sz = tpl.spriteSize;
+    this.shadow = scene.add.ellipse(0, sz * 0.42, sz * 0.62, sz * 0.18, 0x000000, 0.45);
+    this.sprite = scene.add.image(0, 0, tpl.spriteKey).setDisplaySize(sz, sz);
+    scene.tweens.add({
+      targets: this.sprite, y: -3, duration: 900 + Math.random() * 400,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
+    this.hpBarBg = scene.add.rectangle(0, -sz * 0.55, sz * 0.7, 4, 0x000000, 0.6);
+    this.hpBar = scene.add.rectangle(0, -sz * 0.55, sz * 0.7, 4, 0xff5d6c, 1).setOrigin(0.5);
+    this.add([this.shadow, this.sprite, this.hpBarBg, this.hpBar]);
     this.setDepth(8);
   }
 
@@ -43,14 +44,13 @@ export class Enemy extends Phaser.GameObjects.Container {
   }
 
   step(dt: number, target: { x: number; y: number }, bounds: Phaser.Geom.Rectangle): { fire?: { x: number; y: number; angle: number; speed: number; dmg: number } } {
-    // Hit flash effect
+    // Hit flash via tintFill
     if (this.hitFlash > 0) {
       this.hitFlash -= dt;
-      this.core.setFillStyle(0xffffff);
+      this.sprite.setTintFill(0xffffff);
     } else {
-      this.core.setFillStyle(this.tpl.body);
+      this.sprite.clearTint();
     }
-    // Apply knockback decay
     if (Math.abs(this.knockbackX) > 0.01 || Math.abs(this.knockbackY) > 0.01) {
       this.x += this.knockbackX * dt;
       this.y += this.knockbackY * dt;
@@ -76,12 +76,15 @@ export class Enemy extends Phaser.GameObjects.Container {
         fire = { x: this.x, y: this.y, angle: ang, speed: this.tpl.ranged.speed, dmg: this.tpl.ranged.dmg };
       }
     } else {
-      // melee chase
       if (dist > 1) {
         this.x += (dx / dist) * this.tpl.speed * dt;
         this.y += (dy / dist) * this.tpl.speed * dt;
       }
     }
+    // Face target horizontally
+    if (dx < -2) this.sprite.setScale(-Math.abs(this.sprite.scaleX), this.sprite.scaleY);
+    else if (dx > 2) this.sprite.setScale(Math.abs(this.sprite.scaleX), this.sprite.scaleY);
+
     this.x = Phaser.Math.Clamp(this.x, bounds.left + this.tpl.size, bounds.right - this.tpl.size);
     this.y = Phaser.Math.Clamp(this.y, bounds.top + this.tpl.size, bounds.bottom - this.tpl.size);
     this.hpBar.scaleX = Math.max(0, this.hp / this.hpMax);

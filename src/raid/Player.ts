@@ -7,22 +7,24 @@ export class Player extends Phaser.GameObjects.Container {
   speed = 220;
   invuln = 0;
   facing = { x: 1, y: 0 };
-  core: Phaser.GameObjects.Arc;
+  sprite: Phaser.GameObjects.Image;
   ring: Phaser.GameObjects.Arc;
   shadow: Phaser.GameObjects.Ellipse;
-  sword: Phaser.GameObjects.Rectangle;
 
   constructor(scene: Phaser.Scene, x: number, y: number, hp: number) {
     super(scene, x, y);
     scene.add.existing(this as Phaser.GameObjects.GameObject);
     this.hp = hp;
     this.hpMax = hp;
-    this.shadow = scene.add.ellipse(0, 18, 36, 10, 0x000000, 0.45);
-    this.core = scene.add.circle(0, 0, 14, 0x6ad0ff, 1).setStrokeStyle(2, 0x244a66, 1);
-    this.ring = scene.add.circle(0, 0, 18, 0x6ad0ff, 0).setStrokeStyle(2, 0xffffff, 0.5);
-    this.sword = scene.add.rectangle(16, 0, 22, 4, 0xffffff, 1).setOrigin(0, 0.5);
-    this.add([this.shadow, this.ring, this.core, this.sword]);
+    this.shadow = scene.add.ellipse(0, 22, 44, 12, 0x000000, 0.5);
+    this.sprite = scene.add.image(0, 0, 'player').setDisplaySize(72, 72);
+    this.ring = scene.add.circle(0, 0, 26, 0x6ad0ff, 0).setStrokeStyle(2, 0xaef0ff, 0.4);
+    this.add([this.shadow, this.ring, this.sprite]);
     this.setDepth(10);
+    scene.tweens.add({
+      targets: this.sprite, y: -2, duration: 850,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
   }
 
   setFacing(x: number, y: number) {
@@ -30,8 +32,8 @@ export class Player extends Phaser.GameObjects.Container {
     if (len < 0.001) return;
     this.facing.x = x / len;
     this.facing.y = y / len;
-    const ang = Math.atan2(this.facing.y, this.facing.x);
-    this.sword.setRotation(ang);
+    if (x < -2) this.sprite.setScale(-Math.abs(this.sprite.scaleX), this.sprite.scaleY);
+    else if (x > 2) this.sprite.setScale(Math.abs(this.sprite.scaleX), this.sprite.scaleY);
   }
 
   takeDamage(dmg: number, defenseFlat: number): number {
@@ -52,8 +54,7 @@ export class Player extends Phaser.GameObjects.Container {
     this.y += vy * dt;
     this.x = Phaser.Math.Clamp(this.x, bounds.left + 18, bounds.right - 18);
     this.y = Phaser.Math.Clamp(this.y, bounds.top + 18, bounds.bottom - 18);
-    // Blink while invulnerable
-    this.core.setAlpha(this.invuln > 0 ? (Math.floor(this.invuln * 20) % 2 === 0 ? 0.4 : 1) : 1);
+    this.sprite.setAlpha(this.invuln > 0 ? (Math.floor(this.invuln * 20) % 2 === 0 ? 0.4 : 1) : 1);
   }
 
   meleeSwing(scene: Phaser.Scene, range: number) {
