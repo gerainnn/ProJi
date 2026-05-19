@@ -150,7 +150,10 @@
 
   // Pre-generate initial chunks before showing start screen
   function loadInitialChunks() {
-    chunkMgr.update(player.position[0], player.position[2]);
+    // Force multiple update passes per animation frame for fast loading
+    for (let pass = 0; pass < 4; pass++) {
+      chunkMgr.update(player.position[0], player.position[2]);
+    }
 
     const p = chunkMgr.loadProgress();
     const pct = Math.min(p.ready / p.needed, 1);

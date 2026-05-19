@@ -144,7 +144,6 @@
     uniform float uFogEnd;
     uniform float uTime;
 
-    // 12 biomes × 2 colors (low + high), passed flat as arrays of vec3
     uniform vec3 uBiomeLow[12];
     uniform vec3 uBiomeHigh[12];
 
@@ -153,86 +152,203 @@
     ${GLSL_NOISE}
     ${GLSL_ATMOS}
 
-    // Biome color mix: sample low/high by elevation, plus surface noise variation.
-    vec3 biomeBaseColor(int b, float h, vec2 worldXZ) {
+    // -------- Detail normal from noise (simulates bump mapping) --------
+    vec3 detailNormal(vec3 N, vec2 worldXZ, float scale, float strength) {
+      float e = 0.5;
+      float h0 = snoise(worldXZ * scale);
+      float hx = snoise((worldXZ + vec2(e, 0.0)) * scale);
+      float hz = snoise((worldXZ + vec2(0.0, e)) * scale);
+      vec3 tangentNorm = normalize(vec3((h0 - hx) * strength / e, 1.0, (h0 - hz) * strength / e));
+      // Transform tangent-space perturbation into world space
+      // Simplified: assume up-facing terrain, blend with actual normal
+      return normalize(mix(N, tangentNorm, 0.45));
+    }
+
+    // -------- Triplanar blending weights --------
+    vec3 triplanarWeights(vec3 N) {
+      vec3 w = abs(N);
+      w = pow(w, vec3(4.0)); // sharpness
+      return w / (w.x + w.y + w.z);
+    }
+
+    // -------- Procedural rock detail (triplanar) --------
+    float rockDetail(vec3 pos, vec3 N) {
+      vec3 w = triplanarWeights(N);
+      float dXY = fbm2(pos.xy * 0.8, 4);
+      float dXZ = fbm2(pos.xz * 0.8, 4);
+      float dYZ = fbm2(pos.yz * 0.8, 4);
+      return dXY * w.z + dXZ * w.y + dYZ * w.x;
+    }
+
+    // -------- Grass blade pattern --------
+    float grassPattern(vec2 p) {
+      float n1 = snoise(p * 12.0);
+      float n2 = snoise(p * 48.0) * 0.3;
+      return clamp(n1 + n2, -1.0, 1.0) * 0.5 + 0.5;
+    }
+
+    // -------- Enhanced biome color with multi-layer detail --------
+    vec3 biomeBaseColor(int b, float h, vec3 worldPos, vec3 N) {
       vec3 lo = uBiomeLow[b];
       vec3 hi = uBiomeHigh[b];
-      // Height ramp per biome: 0..1 between -4 and 36
       float t = clamp((h + 4.0) / 40.0, 0.0, 1.0);
-      // Surface variation (fine grain) — adds organic mottling.
-      float n1 = fbm2(worldXZ * 0.18, 3);
-      float n2 = snoise(worldXZ * 0.7) * 0.5 + 0.5;
-      // Bias mix slightly with noise so colors aren't uniform.
-      t = clamp(t + (n1 - 0.5) * 0.18, 0.0, 1.0);
+
+      // Multi-octave surface variation at different scales
+      float n_large  = fbm2(worldPos.xz * 0.03, 3);   // large patches
+      float n_mid    = fbm2(worldPos.xz * 0.12, 3);   // mid detail
+      float n_fine   = snoise(worldPos.xz * 0.6);     // fine grain
+      float n_micro  = snoise(worldPos.xz * 2.4) * 0.5 + 0.5; // micro
+
+      // Compose variation
+      t = clamp(t + (n_large - 0.5) * 0.15 + (n_mid - 0.5) * 0.08, 0.0, 1.0);
       vec3 c = mix(lo, hi, t);
-      // Slight tonal variation so we don't see uniform fields.
-      c *= 0.88 + n2 * 0.18;
+
+      // Apply per-pixel color variation (mottling)
+      c *= 0.82 + n_fine * 0.12 + n_micro * 0.08;
+
+      // Grass/vegetation pattern for relevant biomes (3,4,7,11)
+      if (b == 3 || b == 4 || b == 7 || b == 11) {
+        float gp = grassPattern(worldPos.xz);
+        c = mix(c, c * vec3(0.85, 1.05, 0.82), gp * 0.3);
+      }
+
+      // Desert sand ripple pattern
+      if (b == 6) {
+        float ripple = sin(worldPos.x * 0.4 + worldPos.z * 0.15 + n_mid * 6.0) * 0.5 + 0.5;
+        c = mix(c, c * vec3(1.08, 1.02, 0.92), ripple * 0.2);
+      }
+
       return c;
     }
 
-    // Pick rock color for steep slopes
-    vec3 rockColor(vec2 worldXZ, float h) {
-      float n = fbm2(worldXZ * 0.25, 3);
-      vec3 c1 = vec3(0.32, 0.30, 0.28);
-      vec3 c2 = vec3(0.50, 0.46, 0.42);
-      vec3 c = mix(c1, c2, n);
-      // Slight darkening at low altitudes for damp rock
-      c *= mix(0.85, 1.0, smoothstep(0.0, 12.0, h));
+    // -------- Rock color with striations --------
+    vec3 rockColor(vec3 worldPos, vec3 N, float h) {
+      float detail = rockDetail(worldPos, N);
+      // Layer different rock tones
+      vec3 c1 = vec3(0.28, 0.26, 0.24); // dark granite
+      vec3 c2 = vec3(0.46, 0.42, 0.38); // mid sandstone
+      vec3 c3 = vec3(0.56, 0.52, 0.46); // light limestone
+
+      // Use layers based on height + noise
+      float layer = fract(h * 0.06 + detail * 0.4);
+      vec3 c = mix(c1, c2, smoothstep(0.0, 0.45, layer));
+      c = mix(c, c3, smoothstep(0.55, 1.0, layer));
+
+      // Moss on sheltered (north-facing, wet) rock
+      float moss = smoothstep(0.6, 0.9, N.y) * smoothstep(0.4, 0.7, detail);
+      c = mix(c, vec3(0.22, 0.32, 0.16), moss * 0.35);
+
+      // Micro detail variation
+      float micro = snoise(worldPos.xz * 3.6) * 0.5 + 0.5;
+      c *= 0.88 + micro * 0.15;
+
       return c;
+    }
+
+    // -------- Ambient Occlusion approximation --------
+    float approxAO(vec3 N, float slope) {
+      // Concavity estimation: steeper slopes in valleys get darker
+      float cavity = 1.0 - smoothstep(0.0, 0.6, slope) * 0.35;
+      // Higher normal.y = more open sky = less occlusion
+      float openSky = mix(0.65, 1.0, N.y * 0.5 + 0.5);
+      return cavity * openSky;
     }
 
     void main() {
       vec3 N = normalize(vNormal);
       vec3 V = normalize(uViewPos - vWorldPos);
+      vec3 L = normalize(uSunDir);
+
+      // Apply detail normal perturbation for surface richness
+      vec3 detN = detailNormal(N, vWorldPos.xz, 0.3, 0.6);
+      // Blend detail normal more on flat surfaces, less on cliffs
+      vec3 shadingN = mix(N, detN, smoothstep(0.4, 0.8, N.y));
 
       // Biome base color
       int b = int(vBiome + 0.5);
-      vec3 baseCol = biomeBaseColor(b, vWorldPos.y, vWorldPos.xz);
+      vec3 baseCol = biomeBaseColor(b, vWorldPos.y, vWorldPos, N);
 
-      // If slope is steep, override toward rock (independent of biome).
-      // vSlope is roughly 0..1 (saturated chunk-side gradient magnitude).
-      // Use vertical normal as well — straight cliffs always rocky.
+      // Slope-based rock blending (use world normal for detection, detail for shading)
       float verticality = 1.0 - clamp(N.y, 0.0, 1.0);
-      float rockFactor = smoothstep(0.40, 0.85, max(vSlope, verticality));
-      vec3 rock = rockColor(vWorldPos.xz, vWorldPos.y);
+      float rockFactor = smoothstep(0.35, 0.75, max(vSlope, verticality));
+      vec3 rock = rockColor(vWorldPos, N, vWorldPos.y);
       baseCol = mix(baseCol, rock, rockFactor);
 
-      // Snow accumulation on tops (high altitude, low slope)
-      float snowFactor = smoothstep(28.0, 38.0, vWorldPos.y) *
-                         smoothstep(0.55, 0.85, N.y);
-      vec3 snow = vec3(0.95, 0.96, 0.99);
+      // Snow accumulation (aspect + altitude + slope)
+      float snowAlt = smoothstep(26.0, 36.0, vWorldPos.y);
+      float snowSlope = smoothstep(0.50, 0.85, N.y);
+      float snowNoise = fbm2(vWorldPos.xz * 0.08, 2);
+      float snowFactor = snowAlt * snowSlope * smoothstep(0.3, 0.6, snowNoise);
+      vec3 snow = vec3(0.94, 0.96, 0.99) * (0.9 + snoise(vWorldPos.xz * 1.8) * 0.1);
       baseCol = mix(baseCol, snow, snowFactor);
 
-      // Sand at very low altitude, regardless of biome (beach blending)
-      float beachFactor = smoothstep(0.4, 1.4, vWorldPos.y) *
-                          (1.0 - smoothstep(1.4, 2.4, vWorldPos.y));
-      // ^ this peaks between 1.4 and triggers the blend zone. Keep it subtle.
-      // (Actual beach biome handles most of this — this is a soft blend over.)
-      // We'll skip this if-block for simplicity since BIOME.BEACH covers it.
+      // Beach sand (near sea level, low slope)
+      float beachFactor = (1.0 - smoothstep(0.5, 2.5, vWorldPos.y)) *
+                          smoothstep(-0.5, 0.5, vWorldPos.y) *
+                          smoothstep(0.6, 0.9, N.y);
+      vec3 sand = vec3(0.88, 0.80, 0.60) * (0.92 + snoise(vWorldPos.xz * 4.0) * 0.08);
+      baseCol = mix(baseCol, sand, beachFactor * 0.7);
 
-      // Lighting: directional sun + sky ambient
-      float NdL = max(dot(N, normalize(uSunDir)), 0.0);
-      float wrap = max(dot(N, normalize(uSunDir)) * 0.5 + 0.5, 0.0);
-      vec3 sunLight = uSunColor * (NdL * 0.85 + wrap * 0.15);
+      // -------- Lighting --------
+      // PBR-inspired: rougher surfaces → broader diffuse, less spec.
+      float roughness = mix(0.85, 0.98, rockFactor); // rock is rougher
 
-      // Sky ambient via hemispherical: more from above, less from below
-      vec3 ambient = mix(uSkyHorizon * 0.45, uSkyZenith * 0.55, N.y * 0.5 + 0.5) * 0.55;
+      // Diffuse: wrapped Lambert for softer shadows
+      float NdL = dot(shadingN, L);
+      float wrapDiffuse = max(NdL * 0.7 + 0.3, 0.0);
+      float hardDiffuse = max(NdL, 0.0);
+      float diffuse = mix(hardDiffuse, wrapDiffuse, 0.55);
 
-      // Subtle Rim/atmospheric scattering on edges (forward-facing slopes pick up sky)
-      float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
-      vec3 rimLight = uSkyHorizon * rim * 0.18;
+      // Specular (Blinn-Phong with roughness-modulated power)
+      vec3 H = normalize(L + V);
+      float NdH = max(dot(shadingN, H), 0.0);
+      float specPower = mix(60.0, 8.0, roughness);
+      float spec = pow(NdH, specPower) * (1.0 - roughness) * 0.3;
 
-      vec3 color = baseCol * (sunLight + ambient) + rimLight;
+      // Hemispheric ambient (sky above, ground below)
+      float hemiBlend = shadingN.y * 0.5 + 0.5;
+      vec3 skyAmb = uSkyZenith * 0.50;
+      vec3 groundAmb = vec3(0.12, 0.10, 0.08);
+      vec3 ambient = mix(groundAmb, skyAmb, hemiBlend);
 
-      // Fog
+      // Ambient occlusion
+      float ao = approxAO(N, vSlope);
+
+      // Sun shadow approximation (self-shadow for overhangs)
+      float selfShadow = smoothstep(-0.1, 0.15, NdL);
+
+      // Rim/subsurface scattering for backlit vegetation
+      float rim = pow(1.0 - max(dot(N, V), 0.0), 3.5);
+      float backscatter = max(dot(-V, L), 0.0) * rim;
+      vec3 rimLight = uSkyHorizon * rim * 0.12;
+      vec3 subsurface = uSunColor * backscatter * 0.06 *
+                        float(b == 3 || b == 4 || b == 5 || b == 7); // only vegetation biomes
+
+      // Final lighting composition
+      vec3 sunContrib = uSunColor * (diffuse * selfShadow + spec * selfShadow);
+      vec3 color = baseCol * (sunContrib + ambient * ao) + rimLight + subsurface;
+
+      // -------- Atmospheric fog --------
       float dist = length(uViewPos - vWorldPos);
       vec3 viewDir = normalize(vWorldPos - uViewPos);
       vec3 fogCol = skyColorFromDir(viewDir, uSunDir, uSkyZenith, uSkyHorizon, uSunColor);
-      float f = fogFactor(dist, uFogStart, uFogEnd);
-      color = mix(color, fogCol, f);
 
-      // Gamma-ish tone — output in linear-ish space; light pop.
-      color = pow(color, vec3(0.95));
+      // Exponential-squared fog (more realistic than linear)
+      float fogDensity = 0.0025;
+      float fogAmount = 1.0 - exp(-pow(dist * fogDensity, 2.0));
+      fogAmount = clamp(fogAmount, 0.0, 1.0);
+
+      // Height-based fog (thicker in valleys)
+      float heightFog = exp(-max(vWorldPos.y - 0.0, 0.0) * 0.04);
+      fogAmount = max(fogAmount, heightFog * smoothstep(100.0, 400.0, dist) * 0.6);
+
+      color = mix(color, fogCol, fogAmount);
+
+      // -------- Tone mapping (ACES-ish filmic) --------
+      color = color / (color + 0.4) * 1.2;
+
+      // Slight contrast boost
+      color = pow(color, vec3(0.97));
 
       outColor = vec4(color, 1.0);
     }
@@ -281,68 +397,117 @@
     ${GLSL_NOISE}
     ${GLSL_ATMOS}
 
-    // Procedural normal from animated noise — two scrolling layers
+    // Multi-layered animated water normal for realistic ripples
     vec3 waterNormal(vec2 p, float t) {
-      float e = 0.6;
-      vec2 dx1 = vec2(t * 0.18, t * 0.10);
-      vec2 dx2 = vec2(-t * 0.07, t * 0.13);
+      float e = 0.4;
 
-      // Layer 1
-      float h00 = fbm2((p     ) * 0.18 + dx1, 3);
-      float hx0 = fbm2((p + vec2(e,0)) * 0.18 + dx1, 3);
-      float hz0 = fbm2((p + vec2(0,e)) * 0.18 + dx1, 3);
-      vec3 n1 = normalize(vec3((h00 - hx0) / e, 1.0, (h00 - hz0) / e));
+      // Layer 1: large slow swells
+      vec2 d1 = vec2(t * 0.12, t * 0.08);
+      float h1_00 = fbm2((p) * 0.10 + d1, 3);
+      float h1_x  = fbm2((p + vec2(e,0)) * 0.10 + d1, 3);
+      float h1_z  = fbm2((p + vec2(0,e)) * 0.10 + d1, 3);
 
-      // Layer 2
-      float h01 = fbm2((p     ) * 0.55 + dx2, 2);
-      float hx1 = fbm2((p + vec2(e,0)) * 0.55 + dx2, 2);
-      float hz1 = fbm2((p + vec2(0,e)) * 0.55 + dx2, 2);
-      vec3 n2 = normalize(vec3((h01 - hx1) / e, 1.0, (h01 - hz1) / e));
+      // Layer 2: mid-frequency chop
+      vec2 d2 = vec2(-t * 0.06, t * 0.10);
+      float h2_00 = fbm2((p) * 0.35 + d2, 3);
+      float h2_x  = fbm2((p + vec2(e,0)) * 0.35 + d2, 3);
+      float h2_z  = fbm2((p + vec2(0,e)) * 0.35 + d2, 3);
 
-      return normalize(n1 * 0.65 + n2 * 0.35 + vec3(0, 1, 0) * 0.2);
+      // Layer 3: fine ripples (high frequency, low amplitude)
+      vec2 d3 = vec2(t * 0.22, -t * 0.15);
+      float h3_00 = snoise(p * 1.2 + d3);
+      float h3_x  = snoise((p + vec2(e,0)) * 1.2 + d3);
+      float h3_z  = snoise((p + vec2(0,e)) * 1.2 + d3);
+
+      // Combine with decreasing amplitudes
+      float dx = (h1_00 - h1_x) * 1.2 + (h2_00 - h2_x) * 0.6 + (h3_00 - h3_x) * 0.15;
+      float dz = (h1_00 - h1_z) * 1.2 + (h2_00 - h2_z) * 0.6 + (h3_00 - h3_z) * 0.15;
+
+      return normalize(vec3(dx / e, 1.0, dz / e));
+    }
+
+    // Caustic pattern (underwater light refraction)
+    float caustics(vec2 p, float t) {
+      vec2 p1 = p * 0.4 + vec2(t * 0.03, t * 0.02);
+      vec2 p2 = p * 0.6 + vec2(-t * 0.02, t * 0.035);
+      float c1 = snoise(p1) * 0.5 + 0.5;
+      float c2 = snoise(p2) * 0.5 + 0.5;
+      // Voronoi-like pattern from crossing noise waves
+      float c = pow(c1 * c2, 1.5);
+      return c;
     }
 
     void main() {
       vec3 V = normalize(uViewPos - vWorldPos);
+      vec3 L = normalize(uSunDir);
       vec3 N = waterNormal(vWorldPos.xz, uTime);
+
+      // View-distance for LOD of normal detail
+      float dist = length(uViewPos - vWorldPos);
+      // Flatten normals at distance to avoid shimmer
+      float normalFade = smoothstep(80.0, 300.0, dist);
+      N = normalize(mix(N, vec3(0, 1, 0), normalFade));
 
       // Reflection direction
       vec3 R = reflect(-V, N);
+      // Clamp reflection to above horizon
+      R.y = max(R.y, 0.02);
+      R = normalize(R);
 
       // Sample sky for reflection
       vec3 skyRefl = skyColorFromDir(R, uSunDir, uSkyZenith, uSkyHorizon, uSunColor);
 
-      // Fresnel — Schlick approximation
+      // Fresnel (Schlick) — water F0 ≈ 0.02
       float F0 = 0.02;
-      float fresnel = F0 + (1.0 - F0) * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+      float cosTheta = max(dot(N, V), 0.0);
+      float fresnel = F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 
-      // Base water color depends on viewing angle (deep blue at angle, lighter near)
-      vec3 deepCol    = vec3(0.04, 0.16, 0.22);
-      vec3 shallowCol = vec3(0.18, 0.42, 0.50);
+      // Deep and shallow water colors
+      vec3 deepCol    = vec3(0.015, 0.08, 0.14);
+      vec3 shallowCol = vec3(0.10, 0.28, 0.36);
 
-      // Use a subtle horizontal noise to give "shallow patches" suggestion.
-      float n = fbm2(vWorldPos.xz * 0.012, 3);
-      vec3 baseWater = mix(deepCol, shallowCol, smoothstep(0.4, 0.7, n));
+      // Depth estimation via noise (fake — real depth would need terrain height lookup)
+      float depthNoise = fbm2(vWorldPos.xz * 0.008, 3);
+      float depth = smoothstep(0.3, 0.7, depthNoise);
+      vec3 baseWater = mix(shallowCol, deepCol, depth);
 
-      // Specular sun glint
-      vec3 H = normalize(normalize(uSunDir) + V);
-      float spec = pow(max(dot(N, H), 0.0), 80.0);
-      vec3 sunGlint = uSunColor * spec * 1.4;
+      // Caustics on shallow areas (brighten the water base)
+      float caust = caustics(vWorldPos.xz, uTime) * (1.0 - depth) * 0.3;
+      baseWater += caust * uSunColor * max(L.y, 0.0);
 
-      // Combine: base water, plus reflection by fresnel, plus glint.
-      vec3 color = mix(baseWater, skyRefl, fresnel * 0.85) + sunGlint;
+      // Specular sun glint (two-lobe: sharp + broad)
+      vec3 H = normalize(L + V);
+      float NdH = max(dot(N, H), 0.0);
+      float specSharp = pow(NdH, 256.0) * 2.0;
+      float specBroad = pow(NdH, 24.0) * 0.4;
+      vec3 sunGlint = uSunColor * (specSharp + specBroad) * max(L.y, 0.0);
 
-      // Subsurface tint that lifts the deeps slightly
-      color += vec3(0.0, 0.02, 0.04) * (1.0 - fresnel) * 0.6;
+      // Combine: base water + reflection by fresnel + sun glint
+      vec3 color = mix(baseWater, skyRefl, fresnel * 0.88) + sunGlint;
 
-      // Fog
-      float dist = length(uViewPos - vWorldPos);
+      // Subsurface scattering (light penetrating water at glancing angles)
+      float sss = pow(max(dot(-V, L), 0.0), 4.0) * (1.0 - fresnel) * 0.08;
+      color += vec3(0.05, 0.15, 0.12) * sss * max(L.y, 0.0);
+
+      // Foam at shallow areas and wave peaks
+      float foamNoise = snoise(vWorldPos.xz * 0.6 + vec2(uTime * 0.08)) * 0.5 + 0.5;
+      float foam = smoothstep(0.72, 0.9, foamNoise) * (1.0 - depth) * 0.3;
+      color = mix(color, vec3(0.85, 0.90, 0.92), foam);
+
+      // Atmospheric fog (exponential squared)
       vec3 viewDir = normalize(vWorldPos - uViewPos);
       vec3 fogCol = skyColorFromDir(viewDir, uSunDir, uSkyZenith, uSkyHorizon, uSunColor);
-      float f = fogFactor(dist, uFogStart, uFogEnd);
-      color = mix(color, fogCol, f);
+      float fogDensity = 0.0022;
+      float fogAmount = 1.0 - exp(-pow(dist * fogDensity, 2.0));
+      color = mix(color, fogCol, clamp(fogAmount, 0.0, 1.0));
 
-      outColor = vec4(color, 1.0);
+      // Tone mapping
+      color = color / (color + 0.4) * 1.2;
+
+      // Water alpha: mostly opaque, slightly transparent at edges
+      float alpha = mix(0.92, 1.0, fresnel);
+
+      outColor = vec4(color, alpha);
     }
   `;
 
@@ -377,7 +542,41 @@
     uniform vec3 uSkyZenith;
     uniform vec3 uSkyHorizon;
 
+    ${GLSL_NOISE}
     ${GLSL_ATMOS}
+
+    // Procedural volumetric cloud layer
+    float cloudDensity(vec2 p, float t) {
+      // Two moving layers of different speeds
+      vec2 wind1 = vec2(t * 0.008, t * 0.003);
+      vec2 wind2 = vec2(-t * 0.004, t * 0.006);
+
+      float n1 = fbm2(p * 0.0008 + wind1, 5);
+      float n2 = fbm2(p * 0.003 + wind2, 3);
+
+      // Coverage: how much of the sky is cloudy
+      float coverage = 0.45;
+      float density = smoothstep(coverage, coverage + 0.25, n1);
+      // Detail erosion
+      density *= smoothstep(0.2, 0.5, n2);
+      return density;
+    }
+
+    // Cloud color with self-shadowing
+    vec3 cloudColor(float density, vec3 dir, vec3 sunDir, vec3 sunCol) {
+      // Brighter on sun-facing side
+      float sunDot = max(dot(normalize(dir), normalize(sunDir)), 0.0);
+      float scatter = pow(sunDot, 4.0) * 0.4;
+
+      vec3 litCol = vec3(0.98, 0.96, 0.93); // bright tops
+      vec3 shadowCol = vec3(0.42, 0.45, 0.52); // self-shadowed base
+
+      // Thicker clouds are darker at base
+      float shadow = 1.0 - density * 0.55;
+      vec3 col = mix(shadowCol, litCol, shadow);
+      col += sunCol * scatter * 0.3;
+      return col;
+    }
 
     void main() {
       // Reconstruct view direction from NDC
@@ -385,11 +584,38 @@
       farPt.xyz /= farPt.w;
       vec3 dir = normalize(farPt.xyz - uViewPos);
 
+      // Base atmospheric sky
       vec3 col = skyColorFromDir(dir, uSunDir, uSkyZenith, uSkyHorizon, uSunColor);
 
-      // Subtle vertical banding (atmospheric perspective)
-      // Stars at high altitude — only when sun is below
-      // (Skip stars for daytime build; could add for night.)
+      // Rayleigh-like deep blue overhead enhancement
+      float zenithFactor = pow(max(dir.y, 0.0), 1.5);
+      col = mix(col, uSkyZenith * 0.9, zenithFactor * 0.3);
+
+      // Mie-like sun glow (wider warm halo)
+      float sunDot = max(dot(dir, normalize(uSunDir)), 0.0);
+      float mie = pow(sunDot, 3.0) * 0.15 + pow(sunDot, 16.0) * 0.35 + pow(sunDot, 64.0) * 0.5;
+      col += uSunColor * mie * smoothstep(-0.05, 0.1, dir.y) * 0.8;
+
+      // Clouds — project onto a flat layer above viewer
+      if (dir.y > 0.01) {
+        float cloudHeight = 400.0; // world units above sea level
+        float t = (cloudHeight - uViewPos.y) / dir.y;
+        vec2 cloudPos = uViewPos.xz + dir.xz * t;
+
+        float density = cloudDensity(cloudPos, uViewPos.x * 0.001 + 100.0);
+
+        if (density > 0.0) {
+          vec3 cCol = cloudColor(density, dir, uSunDir, uSunColor);
+          // Fade clouds at horizon to blend with fog
+          float horizonFade = smoothstep(0.01, 0.12, dir.y);
+          float alpha = density * horizonFade * 0.92;
+          col = mix(col, cCol, alpha);
+        }
+      }
+
+      // Very subtle gradient banding fix (dithering-like noise)
+      float dither = (snoise(vNDC * 400.0) * 0.5 + 0.5) / 255.0;
+      col += dither;
 
       outColor = vec4(col, 1.0);
     }
