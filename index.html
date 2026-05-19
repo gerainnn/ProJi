@@ -3,130 +3,159 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#050816" />
+  <meta name="theme-color" content="#0d1418" />
   <meta name="color-scheme" content="dark" />
 
-  <title>Орбита · Карманная космогония</title>
-  <meta name="description" content="Процедурно сгенерированная мини-вселенная: звезда, планеты, кометы, лоции. Каждая система — единственная в своём роде." />
+  <title>Terra · Бесконечный мир</title>
+  <meta name="description" content="Процедурно сгенерированный 3D-мир с биомами, водой и атмосферным освещением. Чистый WebGL 2.0, без зависимостей." />
 
-  <meta property="og:title" content="Орбита — карманная космогония" />
-  <meta property="og:description" content="Каждое нажатие R рождает новый мир." />
-  <meta property="og:type" content="website" />
-
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='3' fill='%23ffd28a'/><ellipse cx='16' cy='16' rx='13' ry='5' stroke='%238a9bff' stroke-width='0.8' fill='none' opacity='0.7'/><circle cx='29' cy='13' r='1.6' fill='%238a9bff'/></svg>" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230d1418'/><path d='M2 22 L8 16 L14 19 L20 12 L26 17 L30 14 L30 30 L2 30 Z' fill='%2356845b'/><circle cx='24' cy='8' r='3' fill='%23ffe7a0'/></svg>" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500&display=swap"
     rel="stylesheet"
   />
 
-  <link rel="stylesheet" href="assets/styles/cosmos.css" />
+  <link rel="stylesheet" href="assets/styles/world.css" />
 </head>
 <body>
 
-  <canvas data-cosmos aria-label="Звёздная карта"></canvas>
+  <!-- Main 3D canvas -->
+  <canvas data-canvas></canvas>
 
-  <header class="hud" data-hud>
-    <div class="hud__brand">
-      <svg class="hud__mark" width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
-        <circle cx="13" cy="13" r="2.6" fill="currentColor" opacity="0.95" />
-        <ellipse cx="13" cy="13" rx="11" ry="3.6" stroke="currentColor" stroke-width="0.7" fill="none" opacity="0.5" />
-        <ellipse cx="13" cy="13" rx="6.2" ry="2" stroke="currentColor" stroke-width="0.7" fill="none" opacity="0.7" />
-        <circle cx="24" cy="10" r="1.4" fill="currentColor" opacity="0.9" />
-      </svg>
-      <div class="hud__brand-text">
-        <h1 class="hud__title">Орбита</h1>
-        <p class="hud__subtitle">Карманная космогония</p>
-      </div>
-    </div>
-    <div class="hud__seed">
-      <span class="hud__label">Семя</span>
-      <span class="mono" data-seed>—</span>
-      <button class="hud__reseed" data-reseed aria-label="Новая система (R)">
-        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-          <path d="M2.5 6 a3.5 3.5 0 1 1 1 2.5" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round"/>
-          <path d="M2 4 L2.5 6 L4.5 5.5" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span>R</span>
-      </button>
-    </div>
-  </header>
-
-  <aside class="time" data-time>
-    <div class="time__date">
-      <span class="hud__label">Звёздная дата</span>
-      <span class="mono time__value" data-stardate>Y0000.0</span>
-    </div>
-    <div class="time__speeds" role="group" aria-label="Скорость времени">
-      <button class="speed" data-speed="0" aria-label="Пауза">
-        <svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><rect x="1" y="1" width="2" height="8" fill="currentColor"/><rect x="6" y="1" width="2" height="8" fill="currentColor"/></svg>
-      </button>
-      <button class="speed is-active" data-speed="1">1×</button>
-      <button class="speed" data-speed="10">10×</button>
-      <button class="speed" data-speed="100">100×</button>
-      <button class="speed" data-speed="1000">1000×</button>
-    </div>
-  </aside>
-
-  <aside class="panel" data-panel aria-hidden="true">
-    <button class="panel__close" data-panel-close aria-label="Закрыть лоцию">
-      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-        <path d="M3 3 L11 11 M11 3 L3 11" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-      </svg>
-    </button>
-
-    <header class="panel__head">
-      <div class="panel__crumb mono">
-        <span data-panel-index>—</span>
-        <span class="panel__sep">·</span>
-        <span data-panel-kind>—</span>
-      </div>
-      <h2 class="panel__name" data-panel-name>—</h2>
-      <p class="panel__epithet" data-panel-epithet>—</p>
-    </header>
-
-    <figure class="panel__planet">
-      <canvas data-panel-canvas width="256" height="256" aria-hidden="true"></canvas>
-    </figure>
-
-    <dl class="panel__stats">
-      <div><dt>Орбита</dt><dd data-stat="orbit">—</dd></div>
-      <div><dt>Год</dt><dd data-stat="year">—</dd></div>
-      <div><dt>Радиус</dt><dd data-stat="radius">—</dd></div>
-      <div><dt>Гравитация</dt><dd data-stat="gravity">—</dd></div>
-      <div><dt>Атмосфера</dt><dd data-stat="atmosphere">—</dd></div>
-      <div><dt>Температура</dt><dd data-stat="temperature">—</dd></div>
-      <div><dt>Спутники</dt><dd data-stat="moons">—</dd></div>
-      <div><dt>Население</dt><dd data-stat="population">—</dd></div>
-    </dl>
-
-    <article class="panel__lore" data-panel-lore>—</article>
-
-    <footer class="panel__foot mono">
-      <span data-panel-coords>—</span>
-    </footer>
-  </aside>
-
-  <footer class="legend" data-legend>
-    <span class="legend__item"><kbd>Клик</kbd> по телу — лоция</span>
-    <span class="legend__sep">·</span>
-    <span class="legend__item"><kbd>R</kbd> — новая система</span>
-    <span class="legend__sep">·</span>
-    <span class="legend__item"><kbd>Esc</kbd> — закрыть</span>
-    <span class="legend__sep">·</span>
-    <span class="legend__item"><kbd>Space</kbd> — пауза</span>
-  </footer>
-
-  <div class="curtain" data-curtain aria-hidden="true">
+  <!-- Loading curtain -->
+  <div class="curtain" data-curtain>
     <div class="curtain__inner">
-      <span class="curtain__line">формирование пыли</span>
-      <span class="curtain__line">слипание ядер</span>
-      <span class="curtain__line">розжиг звезды</span>
+      <h1 class="curtain__title">Terra</h1>
+      <p class="curtain__subtitle">Подготовка ландшафта</p>
+      <div class="curtain__steps">
+        <span data-load-step>генерация шумовых полей</span>
+      </div>
+      <div class="curtain__progress">
+        <div class="curtain__progress-fill" data-load-bar></div>
+      </div>
     </div>
   </div>
 
-  <script src="assets/scripts/orbita.js" defer></script>
+  <!-- Start screen (after load) -->
+  <div class="start" data-start hidden>
+    <div class="start__inner">
+      <h2 class="start__title">Terra</h2>
+      <p class="start__lead">
+        Бесконечный процедурный мир. Каждый шаг — новая земля.
+      </p>
+      <button class="start__btn" data-start-btn>Войти в мир</button>
+      <div class="start__hint">
+        <kbd>WASD</kbd> ходить ·
+        <kbd>Mouse</kbd> смотреть ·
+        <kbd>Shift</kbd> бежать ·
+        <kbd>Space</kbd> прыжок ·
+        <kbd>M</kbd> карта ·
+        <kbd>F</kbd> полёт
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD overlay (in-game) -->
+  <div class="hud" data-hud hidden>
+    <!-- Crosshair -->
+    <svg class="hud__crosshair" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="1.2" fill="rgba(255,255,255,0.85)"/>
+      <path d="M12 4 L12 9 M12 15 L12 20 M4 12 L9 12 M15 12 L20 12"
+            stroke="rgba(255,255,255,0.5)" stroke-width="1" fill="none" stroke-linecap="round"/>
+    </svg>
+
+    <!-- Top-left: world info -->
+    <div class="hud__top-left">
+      <div class="hud__brand">
+        <span class="hud__brand-name">Terra</span>
+        <span class="hud__brand-seed mono" data-seed>—</span>
+      </div>
+      <div class="hud__biome">
+        <span class="hud__label">биом</span>
+        <span class="hud__value" data-biome>—</span>
+      </div>
+    </div>
+
+    <!-- Top-right: position + compass -->
+    <div class="hud__top-right">
+      <div class="hud__compass" data-compass>
+        <div class="hud__compass-strip" data-compass-strip></div>
+      </div>
+      <div class="hud__pos mono">
+        <span data-coords>0, 0, 0</span>
+      </div>
+      <div class="hud__time mono">
+        <span data-clock>день · 12:00</span>
+      </div>
+    </div>
+
+    <!-- Bottom-center: hint bar -->
+    <div class="hud__bottom">
+      <div class="hud__hints mono">
+        <kbd>M</kbd> карта
+        <span class="hud__sep">·</span>
+        <kbd>F</kbd> полёт
+        <span class="hud__sep">·</span>
+        <kbd>Esc</kbd> курсор
+      </div>
+    </div>
+
+    <!-- Mini-map -->
+    <div class="hud__minimap">
+      <canvas data-minimap width="180" height="180"></canvas>
+      <div class="hud__minimap-marker"></div>
+    </div>
+  </div>
+
+  <!-- Full-world map overlay -->
+  <div class="map" data-map hidden>
+    <header class="map__head">
+      <div class="map__title-block">
+        <h2 class="map__title">Карта</h2>
+        <p class="map__subtitle mono">клик — переместиться</p>
+      </div>
+      <div class="map__controls">
+        <button class="map__btn" data-map-zoom-out aria-label="Уменьшить">−</button>
+        <span class="map__zoom mono" data-map-zoom>1×</span>
+        <button class="map__btn" data-map-zoom-in aria-label="Увеличить">+</button>
+        <button class="map__btn map__btn--close" data-map-close aria-label="Закрыть">✕</button>
+      </div>
+    </header>
+    <div class="map__viewport" data-map-viewport>
+      <canvas class="map__canvas" data-map-canvas></canvas>
+      <div class="map__player" data-map-player></div>
+      <div class="map__crosshair" data-map-crosshair></div>
+    </div>
+    <footer class="map__foot mono">
+      <span data-map-coords>0, 0</span>
+      <span data-map-biome>—</span>
+    </footer>
+  </div>
+
+  <!-- Pause overlay -->
+  <div class="pause" data-pause hidden>
+    <div class="pause__inner">
+      <h2>Пауза</h2>
+      <p>Кликните, чтобы продолжить</p>
+      <button class="pause__btn" data-pause-resume>Продолжить</button>
+    </div>
+  </div>
+
+  <!-- Scripts: order matters (no modules, classic loading) -->
+  <script src="assets/scripts/math.js"></script>
+  <script src="assets/scripts/noise.js"></script>
+  <script src="assets/scripts/gl.js"></script>
+  <script src="assets/scripts/shaders.js"></script>
+  <script src="assets/scripts/biomes.js"></script>
+  <script src="assets/scripts/terrain.js"></script>
+  <script src="assets/scripts/water.js"></script>
+  <script src="assets/scripts/vegetation.js"></script>
+  <script src="assets/scripts/sky.js"></script>
+  <script src="assets/scripts/player.js"></script>
+  <script src="assets/scripts/map.js"></script>
+  <script src="assets/scripts/main.js"></script>
 </body>
 </html>
