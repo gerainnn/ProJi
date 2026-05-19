@@ -1,0 +1,172 @@
+/* =========================================================
+   Base — Reset, typography defaults, selection, scrollbar
+   ========================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+h1, h2, h3, h4, h5, h6,
+p, figure, blockquote, dl, dd, ul, ol {
+  margin: 0;
+}
+
+ul[role="list"],
+ol[role="list"],
+ul, ol {
+  list-style: none;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+  background: var(--bg);
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-base);
+  font-weight: 400;
+  color: var(--text-secondary);
+  background: var(--bg);
+  overflow-x: hidden;
+  position: relative;
+}
+
+img, picture, svg, video, canvas {
+  display: block;
+  max-width: 100%;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+/* Custom scrollbar — quiet */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-500) transparent;
+}
+html::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+html::-webkit-scrollbar-thumb {
+  background: var(--ink-500);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+
+/* =========================================================
+   Typography primitives
+   ========================================================= */
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-eyebrow);
+  font-weight: 500;
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.eyebrow::before {
+  content: "";
+  width: 24px;
+  height: 1px;
+  background: var(--text-faint);
+}
+
+.eyebrow--accent { color: var(--accent-text); }
+.eyebrow--accent::before { background: var(--accent-text); }
+
+.eyebrow--bare::before { display: none; }
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: var(--ls-display);
+  line-height: var(--lh-display);
+  color: var(--text-primary);
+}
+
+.display em {
+  font-style: italic;
+  color: var(--accent-text);
+}
+
+.h1 { font-size: var(--fs-h1); }
+.h2 { font-size: var(--fs-h2); }
+.h3 { font-size: var(--fs-h3); }
+.h4 { font-size: var(--fs-h4); font-family: var(--font-display); font-weight: 400; line-height: var(--lh-snug); letter-spacing: var(--ls-tight); }
+
+.lead {
+  font-size: var(--fs-lead);
+  line-height: var(--lh-relaxed);
+  color: var(--text-secondary);
+  max-width: 56ch;
+}
+
+.body {
+  font-size: var(--fs-body);
+  line-height: var(--lh-relaxed);
+  color: var(--text-secondary);
+}
+
+.muted { color: var(--text-muted); }
+.faint { color: var(--text-faint); }
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--ls-base);
+}
+
+/* Subtle horizontal rule */
+.rule {
+  height: 1px;
+  background: var(--stroke-1);
+  border: 0;
+  margin: 0;
+}
+
+/* Number labels for sections */
+.section-index {
+  font-family: var(--font-mono);
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--ls-eyebrow);
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
