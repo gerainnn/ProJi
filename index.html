@@ -3,647 +3,130 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0c0a0d" />
+  <meta name="theme-color" content="#050816" />
   <meta name="color-scheme" content="dark" />
 
-  <title>Claude — Aurora · Превью следующего поколения</title>
-  <meta name="description" content="Превью следующей модели Claude от Anthropic. Глубже в рассуждении, точнее в коде, тоньше в понимании." />
+  <title>Орбита · Карманная космогония</title>
+  <meta name="description" content="Процедурно сгенерированная мини-вселенная: звезда, планеты, кометы, лоции. Каждая система — единственная в своём роде." />
 
-  <!-- Social -->
-  <meta property="og:title" content="Claude — Aurora" />
-  <meta property="og:description" content="Превью следующего поколения." />
+  <meta property="og:title" content="Орбита — карманная космогония" />
+  <meta property="og:description" content="Каждое нажатие R рождает новый мир." />
   <meta property="og:type" content="website" />
 
-  <!-- Favicon (inline SVG mark) -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%230c0a0d'/><path d='M9 22 L16 9 L23 22 M11.5 18 L20.5 18' stroke='%23e8a463' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='3' fill='%23ffd28a'/><ellipse cx='16' cy='16' rx='13' ry='5' stroke='%238a9bff' stroke-width='0.8' fill='none' opacity='0.7'/><circle cx='29' cy='13' r='1.6' fill='%238a9bff'/></svg>" />
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap"
     rel="stylesheet"
   />
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="assets/styles/tokens.css" />
-  <link rel="stylesheet" href="assets/styles/base.css" />
-  <link rel="stylesheet" href="assets/styles/components.css" />
-  <link rel="stylesheet" href="assets/styles/sections.css" />
+  <link rel="stylesheet" href="assets/styles/cosmos.css" />
 </head>
 <body>
 
-  <!-- ====== Ambient layers ====== -->
-  <div class="ambient" aria-hidden="true">
-    <div class="ambient__orb ambient__orb--a"></div>
-    <div class="ambient__orb ambient__orb--b"></div>
-    <div class="ambient__orb ambient__orb--c"></div>
-    <div class="ambient__grain"></div>
-    <div class="ambient__vignette"></div>
-  </div>
+  <canvas data-cosmos aria-label="Звёздная карта"></canvas>
 
-  <!-- ====== Navigation ====== -->
-  <header class="nav" data-nav>
-    <div class="nav__inner container">
-      <a href="#top" class="nav__brand" aria-label="Aurora — на главную">
-        <svg class="nav__mark" width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
-          <circle cx="16" cy="16" r="15" fill="none" stroke="currentColor" stroke-opacity="0.25" />
-          <path d="M9 22 L16 9 L23 22 M11.5 18 L20.5 18"
-                stroke="currentColor" stroke-width="1.4"
-                fill="none" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        <span class="nav__wordmark">Aurora</span>
-        <span class="nav__badge">Preview</span>
-      </a>
-
-      <nav class="nav__links" aria-label="Разделы">
-        <a href="#capabilities">Возможности</a>
-        <a href="#reasoning">Рассуждение</a>
-        <a href="#code">Код</a>
-        <a href="#benchmarks">Бенчмарки</a>
-        <a href="#manifesto">Манифест</a>
-      </nav>
-
-      <a href="#manifesto" class="btn btn--ghost nav__cta">
-        <span>Читать</span>
+  <header class="hud" data-hud>
+    <div class="hud__brand">
+      <svg class="hud__mark" width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+        <circle cx="13" cy="13" r="2.6" fill="currentColor" opacity="0.95" />
+        <ellipse cx="13" cy="13" rx="11" ry="3.6" stroke="currentColor" stroke-width="0.7" fill="none" opacity="0.5" />
+        <ellipse cx="13" cy="13" rx="6.2" ry="2" stroke="currentColor" stroke-width="0.7" fill="none" opacity="0.7" />
+        <circle cx="24" cy="10" r="1.4" fill="currentColor" opacity="0.9" />
+      </svg>
+      <div class="hud__brand-text">
+        <h1 class="hud__title">Орбита</h1>
+        <p class="hud__subtitle">Карманная космогония</p>
+      </div>
+    </div>
+    <div class="hud__seed">
+      <span class="hud__label">Семя</span>
+      <span class="mono" data-seed>—</span>
+      <button class="hud__reseed" data-reseed aria-label="Новая система (R)">
         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-          <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M2.5 6 a3.5 3.5 0 1 1 1 2.5" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+          <path d="M2 4 L2.5 6 L4.5 5.5" stroke="currentColor" stroke-width="1.1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-      </a>
+        <span>R</span>
+      </button>
     </div>
   </header>
 
-  <main id="top">
+  <aside class="time" data-time>
+    <div class="time__date">
+      <span class="hud__label">Звёздная дата</span>
+      <span class="mono time__value" data-stardate>Y0000.0</span>
+    </div>
+    <div class="time__speeds" role="group" aria-label="Скорость времени">
+      <button class="speed" data-speed="0" aria-label="Пауза">
+        <svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><rect x="1" y="1" width="2" height="8" fill="currentColor"/><rect x="6" y="1" width="2" height="8" fill="currentColor"/></svg>
+      </button>
+      <button class="speed is-active" data-speed="1">1×</button>
+      <button class="speed" data-speed="10">10×</button>
+      <button class="speed" data-speed="100">100×</button>
+      <button class="speed" data-speed="1000">1000×</button>
+    </div>
+  </aside>
 
-    <!-- ============================================================
-         HERO
-         ============================================================ -->
-    <section class="hero">
-      <canvas class="hero__canvas" data-canvas></canvas>
+  <aside class="panel" data-panel aria-hidden="true">
+    <button class="panel__close" data-panel-close aria-label="Закрыть лоцию">
+      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
+        <path d="M3 3 L11 11 M11 3 L3 11" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+      </svg>
+    </button>
 
-      <div class="hero__inner container">
-        <p class="eyebrow eyebrow--accent" data-reveal>
-          PREVIEW · CODENAME AURORA · MAY 2026
-        </p>
-
-        <h1 class="display h1 hero__title" data-reveal data-reveal-delay="120">
-          Новая глубина<br />
-          <em>мысли.</em>
-        </h1>
-
-        <p class="lead hero__lead" data-reveal data-reveal-delay="280">
-          Следующее поколение Claude. Сильнее в рассуждении.
-          Точнее в коде. Тоньше в понимании контекста, языков и намерений.
-        </p>
-
-        <div class="hero__actions" data-reveal data-reveal-delay="420">
-          <a href="#capabilities" class="btn btn--primary">
-            <span>Изучить возможности</span>
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-              <path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </a>
-          <a href="#manifesto" class="btn btn--ghost">
-            <span>Манифест</span>
-          </a>
-        </div>
-
-        <dl class="hero__meta" data-reveal data-reveal-delay="600">
-          <div>
-            <dt>Контекст</dt>
-            <dd>1 000 000 <span>токенов</span></dd>
-          </div>
-          <div>
-            <dt>Языки</dt>
-            <dd>118 <span>с нюансом</span></dd>
-          </div>
-          <div>
-            <dt>SWE-bench</dt>
-            <dd>78,4<span>%</span></dd>
-          </div>
-          <div>
-            <dt>Задержка</dt>
-            <dd>—42<span>%</span></dd>
-          </div>
-        </dl>
+    <header class="panel__head">
+      <div class="panel__crumb mono">
+        <span data-panel-index>—</span>
+        <span class="panel__sep">·</span>
+        <span data-panel-kind>—</span>
       </div>
+      <h2 class="panel__name" data-panel-name>—</h2>
+      <p class="panel__epithet" data-panel-epithet>—</p>
+    </header>
 
-      <a class="hero__scroll" href="#capabilities" aria-label="Прокрутить ниже">
-        <span>Дальше</span>
-        <svg width="14" height="22" viewBox="0 0 14 22" aria-hidden="true">
-          <path d="M7 1v18M1 14l6 6 6-6" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </a>
-    </section>
+    <figure class="panel__planet">
+      <canvas data-panel-canvas width="256" height="256" aria-hidden="true"></canvas>
+    </figure>
 
-    <!-- ============================================================
-         CAPABILITIES
-         ============================================================ -->
-    <section class="section section--capabilities" id="capabilities">
-      <div class="container">
+    <dl class="panel__stats">
+      <div><dt>Орбита</dt><dd data-stat="orbit">—</dd></div>
+      <div><dt>Год</dt><dd data-stat="year">—</dd></div>
+      <div><dt>Радиус</dt><dd data-stat="radius">—</dd></div>
+      <div><dt>Гравитация</dt><dd data-stat="gravity">—</dd></div>
+      <div><dt>Атмосфера</dt><dd data-stat="atmosphere">—</dd></div>
+      <div><dt>Температура</dt><dd data-stat="temperature">—</dd></div>
+      <div><dt>Спутники</dt><dd data-stat="moons">—</dd></div>
+      <div><dt>Население</dt><dd data-stat="population">—</dd></div>
+    </dl>
 
-        <header class="section-head" data-reveal>
-          <span class="section-index">01 — Возможности</span>
-          <h2 class="display h2">
-            Шесть направлений<br />
-            <em>превосходства.</em>
-          </h2>
-          <p class="lead muted">
-            Каждая область — результат целенаправленной работы:
-            новая архитектура внимания, расширенный контекст,
-            миллионы часов оценки тонкими экспертами.
-          </p>
-        </header>
+    <article class="panel__lore" data-panel-lore>—</article>
 
-        <ul class="cap-grid" role="list">
-
-          <li class="cap" data-reveal data-reveal-delay="80">
-            <span class="cap__index">i.</span>
-            <h3 class="cap__title">Глубокое рассуждение</h3>
-            <p class="cap__desc">
-              Многошаговая логика, сохраняющая когерентность
-              на сотнях шагов. Внутренний след мысли, доступный
-              для аудита. Меньше уверенных ошибок.
-            </p>
-            <ul class="cap__points" role="list">
-              <li>+34% на GPQA Diamond</li>
-              <li>Прозрачный thinking trace</li>
-              <li>Контролируемый бюджет рассуждения</li>
-            </ul>
-          </li>
-
-          <li class="cap" data-reveal data-reveal-delay="160">
-            <span class="cap__index">ii.</span>
-            <h3 class="cap__title">Программирование</h3>
-            <p class="cap__desc">
-              Инженер, а не автодополнение. Понимает архитектуру,
-              ведёт длительные задачи, исправляет дрейф.
-              Лидерство на SWE-bench Verified.
-            </p>
-            <ul class="cap__points" role="list">
-              <li>78,4% SWE-bench Verified</li>
-              <li>Агентные сессии до 8 часов</li>
-              <li>Терминал, файлы, инструменты</li>
-            </ul>
-          </li>
-
-          <li class="cap" data-reveal data-reveal-delay="240">
-            <span class="cap__index">iii.</span>
-            <h3 class="cap__title">Зрение</h3>
-            <p class="cap__desc">
-              Чтение схем, дашбордов, рукописных черновиков,
-              интерфейсов. Не описывает картинку — понимает
-              её роль в задаче.
-            </p>
-            <ul class="cap__points" role="list">
-              <li>Извлечение из произвольных диаграмм</li>
-              <li>OCR на 41 письменности</li>
-              <li>Понимание UI и кода-скриншотов</li>
-            </ul>
-          </li>
-
-          <li class="cap" data-reveal data-reveal-delay="320">
-            <span class="cap__index">iv.</span>
-            <h3 class="cap__title">Длинный контекст</h3>
-            <p class="cap__desc">
-              Миллион токенов с целостным удержанием. Не «помнит
-              начало», а понимает связи между главой первой и
-              сноской на странице 814.
-            </p>
-            <ul class="cap__points" role="list">
-              <li>1М токенов native</li>
-              <li>99,2% needle-in-a-haystack</li>
-              <li>Связное удержание сюжета</li>
-            </ul>
-          </li>
-
-          <li class="cap" data-reveal data-reveal-delay="400">
-            <span class="cap__index">v.</span>
-            <h3 class="cap__title">Агентные задачи</h3>
-            <p class="cap__desc">
-              Планирует, выполняет, проверяет себя. Использует
-              инструменты в нужный момент, останавливается, когда
-              достаточно. Знает разницу между «готово» и «работает».
-            </p>
-            <ul class="cap__points" role="list">
-              <li>Параллельные tool calls</li>
-              <li>Самопроверка результата</li>
-              <li>Безопасное прерывание</li>
-            </ul>
-          </li>
-
-          <li class="cap" data-reveal data-reveal-delay="480">
-            <span class="cap__index">vi.</span>
-            <h3 class="cap__title">Языки и нюансы</h3>
-            <p class="cap__desc">
-              118 языков с уважением к идиоме, регистру и культуре.
-              Понимает иронию, эвфемизм, литературный приём.
-              Не переводит — переносит.
-            </p>
-            <ul class="cap__points" role="list">
-              <li>Русский на уровне редактора</li>
-              <li>Сохранение голоса автора</li>
-              <li>Чувство к жанру и времени</li>
-            </ul>
-          </li>
-
-        </ul>
-      </div>
-    </section>
-
-    <!-- ============================================================
-         REASONING DEMO
-         ============================================================ -->
-    <section class="section section--reasoning" id="reasoning">
-      <div class="container">
-
-        <header class="section-head section-head--split" data-reveal>
-          <div>
-            <span class="section-index">02 — Рассуждение</span>
-            <h2 class="display h2">
-              Мысль, которую<br />
-              <em>можно увидеть.</em>
-            </h2>
-          </div>
-          <p class="lead muted">
-            Aurora не выдаёт ответ — она его выводит. След мысли
-            доступен, проверяем и контролируем по бюджету.
-            Ниже — настоящий пример рассуждения над задачей
-            на чистую логику.
-          </p>
-        </header>
-
-        <div class="reasoning" data-reasoning>
-          <aside class="reasoning__prompt">
-            <span class="eyebrow eyebrow--bare">Запрос</span>
-            <p class="reasoning__question">
-              В тёмной комнате три выключателя. Один из них управляет
-              лампой в соседней комнате, два других — пустые.
-              Можно зайти в соседнюю комнату только один раз.
-              Как определить нужный выключатель?
-            </p>
-            <button class="btn btn--primary reasoning__run" data-reasoning-run>
-              <span data-reasoning-run-label>Запустить рассуждение</span>
-              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-                <path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </button>
-            <div class="reasoning__budget">
-              <span class="mono faint">Бюджет мысли</span>
-              <div class="reasoning__bar">
-                <div class="reasoning__bar-fill" data-reasoning-bar></div>
-              </div>
-              <span class="mono faint" data-reasoning-tokens>0 / 1280 токенов</span>
-            </div>
-          </aside>
-
-          <div class="reasoning__trace" data-reasoning-trace>
-            <span class="eyebrow eyebrow--bare">Поток мысли</span>
-            <ol class="trace" data-trace>
-              <!-- Steps injected by JS -->
-            </ol>
-            <div class="reasoning__answer" data-reasoning-answer hidden>
-              <span class="eyebrow eyebrow--accent">Ответ</span>
-              <p class="reasoning__answer-text"></p>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ============================================================
-         CODE DEMO
-         ============================================================ -->
-    <section class="section section--code" id="code">
-      <div class="container">
-
-        <header class="section-head section-head--split" data-reveal>
-          <div>
-            <span class="section-index">03 — Код</span>
-            <h2 class="display h2">
-              Инженер, не<br />
-              <em>автодополнение.</em>
-            </h2>
-          </div>
-          <p class="lead muted">
-            Запрос на естественном языке превращается в законченный,
-            идиоматичный модуль. С учётом стиля файла, типов и того,
-            как этим будут пользоваться через год.
-          </p>
-        </header>
-
-        <div class="editor" data-editor>
-          <header class="editor__chrome">
-            <div class="editor__dots" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </div>
-            <div class="editor__tabs">
-              <button class="editor__tab is-active" data-editor-tab="ts">debounce.ts</button>
-              <button class="editor__tab" data-editor-tab="py">retry.py</button>
-              <button class="editor__tab" data-editor-tab="rs">cache.rs</button>
-            </div>
-            <div class="editor__meta mono faint" data-editor-meta>TypeScript · 1.2 KB</div>
-          </header>
-
-          <div class="editor__body">
-            <div class="editor__prompt">
-              <span class="editor__prompt-label">Запрос</span>
-              <p data-editor-prompt>
-                Реализуй типобезопасный debounce с поддержкой leading/trailing,
-                отменой и ожиданием результата. Без зависимостей.
-              </p>
-            </div>
-
-            <div class="editor__view">
-              <div class="editor__gutter" data-editor-gutter></div>
-              <pre class="editor__code"><code data-editor-code></code></pre>
-              <span class="editor__caret" data-editor-caret>▍</span>
-            </div>
-
-            <footer class="editor__status">
-              <span class="status-dot" data-editor-status-dot></span>
-              <span class="mono" data-editor-status>Готов</span>
-              <span class="editor__status-spacer"></span>
-              <span class="mono faint" data-editor-stats>0 строк · 0 мс</span>
-            </footer>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============================================================
-         BENCHMARKS
-         ============================================================ -->
-    <section class="section section--bench" id="benchmarks">
-      <div class="container">
-
-        <header class="section-head" data-reveal>
-          <span class="section-index">04 — Бенчмарки</span>
-          <h2 class="display h2">
-            Числа, которые<br />
-            <em>проверяемы.</em>
-          </h2>
-          <p class="lead muted">
-            Полные методики и логи запусков опубликованы.
-            Сравнение — с предыдущим поколением и сильнейшими моделями
-            индустрии на одном железе и одних промптах.
-          </p>
-        </header>
-
-        <div class="bench" data-bench>
-          <div class="bench__legend mono">
-            <span class="bench__swatch bench__swatch--prev"></span>
-            <span class="faint">Предыдущее поколение</span>
-            <span class="bench__swatch bench__swatch--now"></span>
-            <span>Aurora</span>
-          </div>
-
-          <ul class="bench__list" role="list">
-            <li class="bench-row" data-bench-row data-prev="55.2" data-now="78.4" data-max="100" data-suffix="%">
-              <div class="bench-row__head">
-                <span class="bench-row__name">SWE-bench Verified</span>
-                <span class="bench-row__hint mono faint">Real-world coding</span>
-              </div>
-              <div class="bench-row__bars">
-                <div class="bench-bar bench-bar--prev"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">55,2%</span></div>
-                <div class="bench-bar bench-bar--now"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">78,4%</span></div>
-              </div>
-            </li>
-
-            <li class="bench-row" data-bench-row data-prev="62.1" data-now="84.7" data-max="100" data-suffix="%">
-              <div class="bench-row__head">
-                <span class="bench-row__name">GPQA Diamond</span>
-                <span class="bench-row__hint mono faint">Экспертные науки</span>
-              </div>
-              <div class="bench-row__bars">
-                <div class="bench-bar bench-bar--prev"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">62,1%</span></div>
-                <div class="bench-bar bench-bar--now"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">84,7%</span></div>
-              </div>
-            </li>
-
-            <li class="bench-row" data-bench-row data-prev="71.4" data-now="92.6" data-max="100" data-suffix="%">
-              <div class="bench-row__head">
-                <span class="bench-row__name">MATH</span>
-                <span class="bench-row__hint mono faint">Олимпиадная математика</span>
-              </div>
-              <div class="bench-row__bars">
-                <div class="bench-bar bench-bar--prev"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">71,4%</span></div>
-                <div class="bench-bar bench-bar--now"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">92,6%</span></div>
-              </div>
-            </li>
-
-            <li class="bench-row" data-bench-row data-prev="86.4" data-now="99.2" data-max="100" data-suffix="%">
-              <div class="bench-row__head">
-                <span class="bench-row__name">Needle-in-haystack · 1M</span>
-                <span class="bench-row__hint mono faint">Длинный контекст</span>
-              </div>
-              <div class="bench-row__bars">
-                <div class="bench-bar bench-bar--prev"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">86,4%</span></div>
-                <div class="bench-bar bench-bar--now"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">99,2%</span></div>
-              </div>
-            </li>
-
-            <li class="bench-row" data-bench-row data-prev="58.0" data-now="81.3" data-max="100" data-suffix="%">
-              <div class="bench-row__head">
-                <span class="bench-row__name">MMMU · Vision</span>
-                <span class="bench-row__hint mono faint">Мультимодальные задачи</span>
-              </div>
-              <div class="bench-row__bars">
-                <div class="bench-bar bench-bar--prev"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">58,0%</span></div>
-                <div class="bench-bar bench-bar--now"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">81,3%</span></div>
-              </div>
-            </li>
-
-            <li class="bench-row" data-bench-row data-prev="44.6" data-now="74.1" data-max="100" data-suffix="%">
-              <div class="bench-row__head">
-                <span class="bench-row__name">TAU-bench · Agents</span>
-                <span class="bench-row__hint mono faint">Длинные агентные задачи</span>
-              </div>
-              <div class="bench-row__bars">
-                <div class="bench-bar bench-bar--prev"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">44,6%</span></div>
-                <div class="bench-bar bench-bar--now"><span class="bench-bar__fill"></span><span class="bench-bar__value mono">74,1%</span></div>
-              </div>
-            </li>
-          </ul>
-
-          <p class="bench__note mono faint">
-            Методики и сырые логи будут доступны в техническом отчёте при запуске.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============================================================
-         VISION & MULTIMODAL
-         ============================================================ -->
-    <section class="section section--vision">
-      <div class="container">
-        <header class="section-head" data-reveal>
-          <span class="section-index">05 — Восприятие</span>
-          <h2 class="display h2">
-            Понимание, не<br />
-            <em>описание.</em>
-          </h2>
-        </header>
-
-        <div class="vision">
-          <figure class="vision__panel" data-reveal>
-            <div class="vision__visual" aria-hidden="true">
-              <svg viewBox="0 0 320 200" class="vision__chart" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="vg1" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0" stop-color="var(--ember-500)" stop-opacity="0.55" />
-                    <stop offset="1" stop-color="var(--ember-500)" stop-opacity="0" />
-                  </linearGradient>
-                </defs>
-                <g stroke="rgba(246,241,233,0.06)" stroke-width="1">
-                  <line x1="0" y1="40" x2="320" y2="40" />
-                  <line x1="0" y1="80" x2="320" y2="80" />
-                  <line x1="0" y1="120" x2="320" y2="120" />
-                  <line x1="0" y1="160" x2="320" y2="160" />
-                </g>
-                <path d="M0,150 C40,140 60,90 100,80 S160,30 200,55 S280,40 320,30 L320,200 L0,200 Z" fill="url(#vg1)" />
-                <path d="M0,150 C40,140 60,90 100,80 S160,30 200,55 S280,40 320,30" fill="none" stroke="var(--ember-400)" stroke-width="1.5" />
-                <g fill="var(--ember-400)">
-                  <circle cx="0" cy="150" r="2.5" />
-                  <circle cx="100" cy="80" r="2.5" />
-                  <circle cx="200" cy="55" r="2.5" />
-                  <circle cx="320" cy="30" r="2.5" />
-                </g>
-              </svg>
-            </div>
-            <figcaption>
-              <span class="eyebrow eyebrow--bare">Вход</span>
-              <p>График квартальной выручки без подписей.</p>
-            </figcaption>
-          </figure>
-
-          <div class="vision__answer" data-reveal data-reveal-delay="200">
-            <span class="eyebrow eyebrow--accent">Понимание</span>
-            <p class="lead">
-              Это не просто восходящий тренд — это композиция из
-              трёх фаз: плато (Q1), ускоренный рост (Q2–Q3), стабилизация
-              на новом уровне (Q4). Расхождение между Q1 и пиком — около
-              <em>4×</em>; характерная форма органического масштабирования
-              после product-market fit.
-            </p>
-            <ul class="vision__bullets" role="list">
-              <li><span class="mono">→</span> Узнаёт паттерн без подписей осей</li>
-              <li><span class="mono">→</span> Объясняет, что значит, а не что нарисовано</li>
-              <li><span class="mono">→</span> Предлагает гипотезу, маркируя её как гипотезу</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============================================================
-         MANIFESTO
-         ============================================================ -->
-    <section class="section section--manifesto" id="manifesto">
-      <div class="container container--narrow">
-        <header class="section-head section-head--center" data-reveal>
-          <span class="section-index">06 — Манифест</span>
-          <h2 class="display h2">
-            Тише.<br />
-            <em>Глубже.</em><br />
-            Полезнее.
-          </h2>
-        </header>
-
-        <article class="manifesto" data-reveal data-reveal-delay="120">
-          <p class="manifesto__lede">
-            Мы не строили модель, которая громче. Мы строили
-            модель, которая <em>точнее</em>.
-          </p>
-
-          <p>
-            Большинство задач, с которыми приходят к ассистенту, не
-            про яркость ответа — а про его уместность. Это значит
-            понимать не только то, что спрошено, но и зачем; не
-            только то, что нужно сделать, но и до какой степени;
-            не только как ответить, но и когда промолчать.
-          </p>
-
-          <p>
-            Aurora обучена быть полезной — а полезность тиха.
-            Она не торопится впечатлить. Она проверяет себя.
-            Она признаёт, когда не уверена. Она различает между
-            «я знаю» и «я слышал, что говорят».
-          </p>
-
-          <p>
-            Это модель, которой можно доверить решение —
-            и доверить отказ.
-          </p>
-
-          <hr class="rule manifesto__rule" />
-
-          <p class="manifesto__sign">
-            <span class="mono faint">Команда Aurora</span><br />
-            <span class="mono faint">Май 2026</span>
-          </p>
-        </article>
-      </div>
-    </section>
-
-    <!-- ============================================================
-         CTA / FOOTER
-         ============================================================ -->
-    <footer class="footer">
-      <div class="container">
-        <div class="footer__cta">
-          <h3 class="display h3">
-            Доступ для<br />
-            <em>избранных партнёров.</em>
-          </h3>
-          <p class="lead muted">
-            Превью открывается ограниченным группам команд.
-            Оставьте заявку — мы вернёмся, когда сможем сказать «да».
-          </p>
-          <form class="footer__form" data-form onsubmit="return false">
-            <label class="footer__field">
-              <span>Email</span>
-              <input type="email" placeholder="you@team.dev" autocomplete="email" required />
-            </label>
-            <button class="btn btn--primary" type="submit">
-              <span data-form-label>Запросить доступ</span>
-              <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-                <path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </button>
-          </form>
-        </div>
-
-        <hr class="rule" />
-
-        <div class="footer__bottom">
-          <div class="footer__brand">
-            <svg width="18" height="18" viewBox="0 0 32 32" aria-hidden="true">
-              <path d="M9 22 L16 9 L23 22 M11.5 18 L20.5 18"
-                    stroke="currentColor" stroke-width="1.4"
-                    fill="none" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            <span>Aurora</span>
-            <span class="mono faint">· Preview · 2026</span>
-          </div>
-          <ul class="footer__links" role="list">
-            <li><a href="#capabilities">Возможности</a></li>
-            <li><a href="#benchmarks">Бенчмарки</a></li>
-            <li><a href="#manifesto">Манифест</a></li>
-          </ul>
-          <p class="mono faint footer__legal">
-            Превью-материал. Не предназначен для коммерческого использования
-            до официального запуска.
-          </p>
-        </div>
-      </div>
+    <footer class="panel__foot mono">
+      <span data-panel-coords>—</span>
     </footer>
-  </main>
+  </aside>
 
-  <!-- Scripts -->
-  <script src="assets/scripts/canvas.js" defer></script>
-  <script src="assets/scripts/main.js" defer></script>
+  <footer class="legend" data-legend>
+    <span class="legend__item"><kbd>Клик</kbd> по телу — лоция</span>
+    <span class="legend__sep">·</span>
+    <span class="legend__item"><kbd>R</kbd> — новая система</span>
+    <span class="legend__sep">·</span>
+    <span class="legend__item"><kbd>Esc</kbd> — закрыть</span>
+    <span class="legend__sep">·</span>
+    <span class="legend__item"><kbd>Space</kbd> — пауза</span>
+  </footer>
+
+  <div class="curtain" data-curtain aria-hidden="true">
+    <div class="curtain__inner">
+      <span class="curtain__line">формирование пыли</span>
+      <span class="curtain__line">слипание ядер</span>
+      <span class="curtain__line">розжиг звезды</span>
+    </div>
+  </div>
+
+  <script src="assets/scripts/orbita.js" defer></script>
 </body>
 </html>
