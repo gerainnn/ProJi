@@ -102,38 +102,28 @@
     /* ------------- Height ------------- */
     // Returns world Y coordinate (in units).
     function height(x, z) {
-      // Domain warp — adds organic curves to the macro shapes.
-      const wScale = 0.0015;
-      const wAmp = 60.0;
-      const wx = x + nWarp.noise2(x * wScale, z * wScale) * wAmp;
-      const wz = z + nWarp.noise2(x * wScale + 100, z * wScale + 100) * wAmp;
-
-      // Continental mask — 0..1, decides land vs sea presence.
-      // Very low frequency so we get continents and oceans.
-      const c = fbm((u, v) => nContinent.noise2(u, v), wx * 0.0009, wz * 0.0009, 4, 0.5, 2.0);
-      // c ~ 0..1, sea center ~0.5
+      // Simplified: fewer octaves, no domain warp (huge perf savings)
+      // Continental mask — 0..1
+      const c = fbm((u, v) => nContinent.noise2(u, v), x * 0.0009, z * 0.0009, 2, 0.5, 2.0);
       const landMask = smoothstep(0.42, 0.58, c);
 
-      // Ridged mountains (most prominent on land).
+      // Ridged mountains
       const mountainRaw = ridgedFbm((u, v) => nMountain.noise2(u, v),
-                                    x * 0.0030, z * 0.0030, 6, 0.55, 2.0);
-      // Sharpen + bias toward higher elevation
-      const mountain = Math.pow(mountainRaw, 1.6);
+                                    x * 0.0030, z * 0.0030, 3, 0.55, 2.0);
+      const mountain = mountainRaw * mountainRaw;
 
-      // Hills (mid frequency).
-      const hill = fbm((u, v) => nHill.noise2(u, v), x * 0.012, z * 0.012, 5, 0.5, 2.0);
+      // Hills
+      const hill = nHill.noise2(x * 0.012, z * 0.012) * 0.5 + 0.5;
 
-      // Detail bumps.
-      const detail = fbm((u, v) => nDetail.noise2(u, v), x * 0.06, z * 0.06, 3, 0.5, 2.0);
+      // Detail
+      const detail = nDetail.noise2(x * 0.06, z * 0.06) * 0.5 + 0.5;
 
-      // Compose:
-      //   - On land: base elevation + mountains weighted by mountainMask
-      //   - In ocean: negative depth based on landMask
+      // Compose
       const baseLand   = landMask * 6.0;
-      const mountainContribution = mountain * landMask * 80.0;
-      const hillContribution     = (hill - 0.5) * landMask * 6.0;
-      const detailContribution   = (detail - 0.5) * 1.6;
-      const oceanDepth           = (1.0 - landMask) * -16.0;
+      const mountainContribution = mountain * landMask * 70.0;
+      const hillContribution     = (hill - 0.5) * landMask * 5.0;
+      const detailContribution   = (detail - 0.5) * 1.2;
+      const oceanDepth           = (1.0 - landMask) * -14.0;
 
       return SEA_LEVEL + baseLand + mountainContribution + hillContribution +
              detailContribution + oceanDepth;
@@ -141,29 +131,24 @@
 
     /* ------------- Slope (numerical gradient) ------------- */
     function slope(x, z) {
-      const e = 1.0;
+      const e = 2.0;
       const h0 = height(x, z);
       const hx = height(x + e, z);
       const hz = height(x, z + e);
       const dx = hx - h0;
       const dz = hz - h0;
-      return Math.sqrt(dx * dx + dz * dz);
+      return Math.sqrt(dx * dx + dz * dz) / e;
     }
 
     /* ------------- Climate ------------- */
     function temperature(x, z, h) {
-      // Latitude effect — slow gradient over Z; large period gives variety.
-      const lat = nTemp.noise2(x * 0.00025, z * 0.00025);
-      // Local noise variance
-      const local = nTemp.noise2(x * 0.0035, z * 0.0035) * 0.3;
-      // Altitude lapse — colder higher up.
+      const lat = nTemp.noise2(x * 0.00025, z * 0.00025) * 0.5 + 0.5;
       const altPenalty = Math.max(0, h - 4) * 0.018;
-      // 0 = freezing, 1 = hot
-      return clamp(lat * 0.5 + 0.55 + local - altPenalty, 0, 1);
+      return clamp(lat + 0.05 - altPenalty, 0, 1);
     }
 
     function moisture(x, z) {
-      const m = fbm((u, v) => nMoist.noise2(u, v), x * 0.0014, z * 0.0014, 4, 0.5, 2.0);
+      const m = nMoist.noise2(x * 0.0014, z * 0.0014) * 0.5 + 0.5;
       return clamp(m, 0, 1);
     }
 

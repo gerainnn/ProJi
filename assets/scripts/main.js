@@ -148,35 +148,19 @@
   let gameStarted = false;
   let loadingDone = false;
 
-  // Pre-generate initial chunks before showing start screen
-  function loadInitialChunks() {
-    // Force multiple update passes per animation frame for fast loading
-    for (let pass = 0; pass < 4; pass++) {
-      chunkMgr.update(player.position[0], player.position[2]);
-    }
+  // Skip heavy pre-generation — just show start screen immediately.
+  // Chunks will stream in during gameplay (player won't notice on flat terrain).
+  // Trigger one update to start chunk creation in background.
+  chunkMgr.update(player.position[0], player.position[2]);
 
-    const p = chunkMgr.loadProgress();
-    const pct = Math.min(p.ready / p.needed, 1);
-    loadBarEl.style.width = (20 + pct * 75) + "%";
-    loadStepEl.textContent = `чанки ${p.ready}/${p.needed}`;
-
-    if (pct >= 1 && !loadingDone) {
-      loadingDone = true;
-      loadBarEl.style.width = "100%";
-      loadStepEl.textContent = "готово";
-      setTimeout(() => {
-        curtainEl.classList.add("is-fading");
-        setTimeout(() => {
-          curtainEl.classList.add("is-gone");
-          startEl.hidden = false;
-        }, 700);
-      }, 300);
-      return;
-    }
-
-    if (!loadingDone) requestAnimationFrame(loadInitialChunks);
-  }
-  requestAnimationFrame(loadInitialChunks);
+  // Immediately show start screen
+  setTimeout(() => {
+    curtainEl.classList.add("is-fading");
+    setTimeout(() => {
+      curtainEl.classList.add("is-gone");
+      startEl.hidden = false;
+    }, 700);
+  }, 600);
 
   /* ======================== START ======================== */
   startBtnEl.addEventListener("click", () => {

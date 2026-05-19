@@ -23,10 +23,10 @@
 
   /* ======================== CONFIG ======================== */
   const CHUNK_SIZE      = 64;      // world units per chunk edge
-  const VERTS_PER_SIDE  = 65;      // vertices along each edge (64 quads)
-  const VIEW_RADIUS     = 6;       // chunks visible in each direction (6→169 chunks)
-  const GEN_PER_FRAME   = 6;       // max chunks to generate per frame (fast initial load)
-  const STEP            = CHUNK_SIZE / (VERTS_PER_SIDE - 1); // ~1.0 unit
+  const VERTS_PER_SIDE  = 17;      // vertices along each edge (16 quads — very fast)
+  const VIEW_RADIUS     = 5;       // chunks visible in each direction (5→121 chunks)
+  const GEN_PER_FRAME   = 4;       // max chunks to generate per frame (keeps 60fps)
+  const STEP            = CHUNK_SIZE / (VERTS_PER_SIDE - 1); // 4.0 units
 
   /* ======================== CHUNK ======================== */
 
@@ -331,12 +331,21 @@
 
       // Generate pending chunks (always, regardless of camera movement)
       let generated = 0;
-      const limit = pending.length > 50 ? GEN_PER_FRAME * 3 : GEN_PER_FRAME;
+      const limit = pending.length > 30 ? GEN_PER_FRAME * 2 : GEN_PER_FRAME;
       while (pending.length > 0 && generated < limit) {
         const c = pending.shift();
         if (!chunks.has(c.key)) continue; // may have been deleted
-        const data = generateChunkData(c, sampler);
-        uploadChunk(c, data);
+        try {
+          const data = generateChunkData(c, sampler);
+          uploadChunk(c, data);
+        } catch (e) {
+          // If generation fails for any reason, mark as ready with flat ground
+          console.warn("Chunk gen failed:", c.key, e);
+          c.ready = true;
+          c.minY = 0;
+          c.maxY = 0;
+          c.trees = [];
+        }
         generated++;
       }
     }
